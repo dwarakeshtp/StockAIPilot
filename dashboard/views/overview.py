@@ -5,7 +5,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from dashboard.components.state import get_decision_store, get_product, results
+from dashboard.components.state import api
 
 st.title("Agentic Demand Forecasting & Inventory Reorder Recommendations")
 st.caption(
@@ -30,35 +30,30 @@ digraph {
 }
 """
 
-all_results = results()
-if not all_results:
+recommendations = api().recommendations()
+if not recommendations:
     st.info("No agent results yet. Click **Run all** in the sidebar to run the pipeline for "
             "every item (about 30 seconds).")
     st.graphviz_chart(WORKFLOW_DOT)
     st.stop()
 
-decisions = get_decision_store().latest_by_item()
-rows = []
-for r in all_results.values():
-    rec = r.critic.recommendation
-    decision = decisions.get(r.item_id)
-    rows.append({
-        "Product": get_product(r.item_id).name,
-        "Department": get_product(r.item_id).department,
-        "Item code": r.item_id,
-        "Action": rec.action.value,
-        "Qty": rec.quantity,
-        "Order value": rec.order_value,
-        "Risk": r.risk.risk_level.value,
-        "Confidence": r.risk.confidence_score,
-        "Stockout prob.": r.inventory.stockout_probability,
-        "Days of cover": r.inventory.days_of_cover,
-        "Model": r.forecast.model_used,
-        "WAPE": r.forecast.selected_metrics.wape,
-        "Verdict": r.critic.verdict.value,
-        "Revisions": r.revision_count,
-        "Decision": decision.decision.value if decision else "PENDING",
-    })
+rows = [{
+    "Product": r["product_name"],
+    "Department": r["department"],
+    "Item code": r["item_id"],
+    "Action": r["action"],
+    "Qty": r["quantity"],
+    "Order value": r["order_value"],
+    "Risk": r["risk_level"],
+    "Confidence": r["confidence"],
+    "Stockout prob.": r["stockout_probability"],
+    "Days of cover": r["days_of_cover"],
+    "Model": r["model"],
+    "WAPE": r["wape"],
+    "Verdict": r["verdict"],
+    "Revisions": r["revision_count"],
+    "Decision": r["decision"],
+} for r in recommendations]
 table = pd.DataFrame(rows).sort_values(["Verdict", "Stockout prob."], ascending=[False, False])
 
 c1, c2, c3, c4, c5 = st.columns(5)

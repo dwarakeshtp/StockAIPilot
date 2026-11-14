@@ -6,8 +6,7 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.components.charts import metrics_comparison_figure
-from dashboard.components.state import get_product, get_settings, results
-from src.utils.io import read_json
+from dashboard.components.state import api, get_product, results
 
 st.title("Performance Metrics")
 
@@ -48,16 +47,14 @@ with c2:
     metric = st.segmented_control("Metric", ["mae", "rmse", "wape", "mape"], default="wape")
     st.plotly_chart(metrics_comparison_figure(frame, metric or "wape"))
 
-eval_dir = get_settings().outputs.evaluation_dir
-summary_path = eval_dir / "evaluation_summary.json"
+ev = api().evaluation_summary()
 st.divider()
 st.subheader("Evaluation results")
-if not summary_path.exists():
+if ev is None:
     st.info("Run `python scripts/run_evaluation.py` to generate the hold-out, inventory "
             "simulation and scenario evaluations.")
     st.stop()
 
-ev = read_json(summary_path)
 st.caption(f"Generated {ev.get('generated_at', '')[:19]} on data source `{ev.get('data_source')}`.")
 
 holdout = ev.get("holdout_accuracy")

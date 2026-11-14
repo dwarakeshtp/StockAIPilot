@@ -5,7 +5,7 @@
 3. Critic scenario evaluation (injected anomalies / data issues / supply issues).
 
 Usage:
-    python scripts/run_evaluation.py            # requires outputs/runs/latest.json
+    python scripts/run_evaluation.py            # uses the latest runs stored in the database
     python scripts/run_evaluation.py --skip-scenarios
 """
 
@@ -27,7 +27,8 @@ import pandas as pd  # noqa: E402
 from src.config.settings import load_settings  # noqa: E402
 from src.data.cleaning import clean_item_sales  # noqa: E402
 from src.data.features import PROPHET_REGRESSORS, build_features, prophet_holidays  # noqa: E402
-from src.data.repository import DataRepository  # noqa: E402
+from src.db.loader import init_db  # noqa: E402
+from src.db.repository import SQLiteRepository  # noqa: E402
 from src.evaluation.holdout import holdout_accuracy  # noqa: E402
 from src.evaluation.inventory_simulation import aggregate, compare_policies  # noqa: E402
 from src.evaluation.report import render_report  # noqa: E402
@@ -59,7 +60,7 @@ def _fit_predict_factory(model: str, arima_order, holidays, settings):
     return arima
 
 
-def run_inventory_simulation(results, repo: DataRepository, settings, days: int = 56) -> dict:
+def run_inventory_simulation(results, repo: SQLiteRepository, settings, days: int = 56) -> dict:
     """Simulate both policies for every item."""
     per_item, raw = [], []
     for r in results:
@@ -97,8 +98,9 @@ def main() -> int:
     settings = load_settings()
     configure_logging(settings.outputs.logs_dir, level="WARNING")
     settings.ensure_output_dirs()
-    repo = DataRepository(settings)
-    results = load_latest_results(settings)
+    init_db(settings, source=settings.database.init_source)
+    repo = SQLiteRepository(settings)
+    results = [r for r in load_latest_results(settings) if r.item_id in repo.item_ids]
     if not results:
         print("No saved results - running the pipeline first ...")
         runner = PipelineRunner(settings, repository=repo)
@@ -109,7 +111,7 @@ def main() -> int:
     summary_path = settings.outputs.evaluation_dir / "evaluation_summary.json"
     previous = read_json(summary_path) if summary_path.exists() else {}
     summary: dict = {
-        "generated_at": utc_now(), "data_source": repo.dataset.source, "n_items": len(results),
+        "generated_at": utc_now(), "data_source": repo.source, "n_items": len(results),
         **{k: previous[k] for k in ("inventory_simulation", "scenario_evaluation")
            if k in previous},
     }
@@ -127,7 +129,7 @@ def main() -> int:
             "outputs": settings.outputs.model_copy(
                 update={"root": settings.outputs.evaluation_dir / "scenario_runs"})})
         summary["scenario_evaluation"] = evaluate_scenarios(
-            default_scenarios(), repo.dataset, repo.inventory_params, scen_settings)
+            default_scenarios(), repo.to_dataset(), repo.inventory_params, scen_settings)
 
     out_dir = settings.outputs.evaluation_dir
     path = write_json(summary_path, summary)

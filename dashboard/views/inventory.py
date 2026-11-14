@@ -5,9 +5,10 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from dashboard.components.api_client import ApiError
 from dashboard.components.charts import inventory_projection_figure
 from dashboard.components.formatting import action_badge, verdict_badge
-from dashboard.components.state import get_runner, get_settings, require_result, what_if_results
+from dashboard.components.state import api, get_settings, require_result, what_if_results
 
 st.title("3. Inventory Planning Agent")
 st.caption("Rule-based policy: safety stock, reorder point, order-up-to reorder quantity "
@@ -74,7 +75,10 @@ if submitted:
     overrides = {"lead_time_days": float(lead_time), "service_level": float(service),
                  "demand_multiplier": float(demand_mult), "on_hand": float(on_hand)}
     with st.spinner("Re-planning ..."):
-        what_if_results()[result.item_id] = get_runner().what_if(result, overrides)
+        try:
+            what_if_results()[result.item_id] = api().what_if(result.run_id, overrides)
+        except ApiError as exc:
+            st.error(f"What-if failed: {exc.detail}")
 
 scenario = what_if_results().get(result.item_id)
 if scenario is not None:

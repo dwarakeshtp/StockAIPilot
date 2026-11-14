@@ -21,7 +21,7 @@ import pandas as pd
 from src.agents.schemas import PipelineResult
 from src.config.settings import Settings
 from src.data.ingestion import SalesDataset
-from src.data.repository import DataRepository
+from src.data.repository import InMemoryRepository
 from src.orchestration.runner import PipelineRunner
 
 SalesFn = Callable[[pd.DataFrame], pd.DataFrame]
@@ -141,7 +141,7 @@ def run_scenario(scenario: Scenario, base: SalesDataset, base_params: pd.DataFra
         sales = pd.concat([others, scenario.sales_fn(item_rows)], ignore_index=True)
     dataset = SalesDataset(sales=sales, future_calendar=base.future_calendar,
                            source=f"{base.source}+scenario", future_actuals=None)
-    repo = DataRepository(settings, dataset=dataset)
+    repo = InMemoryRepository(settings, dataset=dataset)
     params = base_params.copy()
     if scenario.params_fn is not None:
         idx = params.index[params["item_id"] == scenario.item_id][0]

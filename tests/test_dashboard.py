@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 @pytest.fixture(scope="module")
 def pipeline_output(synthetic_dataset, tmp_path_factory):
     from src.config.settings import load_settings
-    from src.data.repository import DataRepository
+    from src.data.repository import InMemoryRepository
 
     base = load_settings(load_env=False)
     tmp = tmp_path_factory.mktemp("dash")
@@ -37,7 +37,7 @@ def pipeline_output(synthetic_dataset, tmp_path_factory):
         "data": base.data.model_copy(update={"simulated_dir": tmp / "sim"}),
         "outputs": base.outputs.model_copy(update={"root": tmp / "out"}),
     })
-    repo = DataRepository(settings, dataset=synthetic_dataset)
+    repo = InMemoryRepository(settings, dataset=synthetic_dataset)
     item = repo.item_ids[0]
     result = PipelineRunner(settings, repository=repo).run_item(item)
     history, _ = clean_item_sales(repo.item_sales(item))
@@ -76,14 +76,56 @@ def test_metrics_comparison_figure() -> None:
     assert len(fig.data) == 2
 
 
-@pytest.mark.skipif(not (ROOT / "data" / "processed" / "sales_subset.parquet").exists(),
-                    reason="processed M5 subset not available")
-def test_dashboard_pages_render_without_exceptions() -> None:
+@pytest.fixture()
+def api_backed_dashboard(services):
+    """Point the dashboard's API client at an in-process API with one stored run."""
+    from fastapi.testclient import TestClient
+
+    from dashboard.components.api_client import set_client
+    from src.api.main import create_app
+
+    with TestClient(create_app(services=services)) as client:
+        job = client.post("/jobs", json={"item_ids": [services.repository.item_ids[0]]}).json()
+        services.jobs.wait(job["job_id"], timeout=300)
+        set_client(client)
+        yield client
+    set_client(None)
+
+
+def test_dashboard_pages_render_without_exceptions(api_backed_dashboard) -> None:
     from streamlit.testing.v1 import AppTest
 
     at = AppTest.from_file(str(ROOT / "dashboard" / "app.py"), default_timeout=180).run()
-    assert not at.exception
+    assert not at.exception, [e.value for e in at.exception]
     for page in ("views/forecast.py", "views/risk.py", "views/inventory.py",
                  "views/critic.py", "views/trace.py", "views/metrics.py"):
         at.switch_page(page).run()
         assert not at.exception, f"{page}: {[e.value for e in at.exception]}"
+
+
+def test_dashboard_run_item_submits_a_job(api_backed_dashboard, services) -> None:
+    from streamlit.testing.v1 import AppTest
+
+    at = AppTest.from_file(str(ROOT / "dashboard" / "app.py"), default_timeout=180).run()
+    item = services.repository.item_ids[1]
+    assert item not in services.pipeline.latest()
+    at.sidebar.selectbox[0].set_value(item).run()
+    next(b for b in at.sidebar.button if b.label == "Run item").click().run()
+    assert not at.exception, [e.value for e in at.exception]
+    assert item in services.pipeline.latest()
+    assert "Recommendations" in [s.value for s in at.subheader]
+
+
+def test_dashboard_shows_banner_when_api_is_down() -> None:
+    import httpx
+    from streamlit.testing.v1 import AppTest
+
+    from dashboard.components.api_client import set_client
+
+    set_client(httpx.Client(base_url="http://127.0.0.1:9", timeout=1))
+    try:
+        at = AppTest.from_file(str(ROOT / "dashboard" / "app.py"), default_timeout=60).run()
+        assert not at.exception
+        assert any("not reachable" in e.value for e in at.error)
+    finally:
+        set_client(None)

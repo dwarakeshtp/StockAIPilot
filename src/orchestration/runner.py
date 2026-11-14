@@ -1,23 +1,26 @@
-"""High-level façade used by scripts and the dashboard to run the agent pipeline."""
+"""High-level façade used by scripts and the API services to run the agent pipeline."""
 
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from pathlib import Path
+from functools import cached_property
+from typing import Any
 
 from src.agents.llm_client import LLMClient, describe_llm
 from src.agents.schemas import PipelineResult
 from src.config.settings import Settings
-from src.data.repository import DataRepository
+from src.data.repository import Repository
+from src.db.engine import get_engine
+from src.db.stores import RunStore
 from src.logging.logger import bind_context, clear_context, get_logger
 from src.orchestration.graph import (
     PipelineDependencies,
+    build_forecast_graph,
     build_pipeline_graph,
     build_what_if_graph,
 )
 from src.orchestration.tracing import save_trace
 from src.utils.ids import new_run_id, utc_now
-from src.utils.io import read_json, write_json
 
 logger = get_logger(__name__)
 
@@ -25,22 +28,31 @@ ProgressCallback = Callable[[int, int, str], None]
 
 
 class PipelineRunner:
-    """Runs the LangGraph pipeline per item and persists results and traces."""
+    """Runs the LangGraph pipeline per item; traces go to files, results to the RunStore."""
 
     def __init__(
         self,
         settings: Settings,
-        repository: DataRepository | None = None,
+        repository: Repository | None = None,
         llm: LLMClient | None = None,
+        run_store: RunStore | None = None,
     ) -> None:
         self.settings = settings
         self.deps = PipelineDependencies.build(settings, repository, llm)
         self.graph = build_pipeline_graph(self.deps)
         self.what_if_graph = build_what_if_graph(self.deps)
+        self.forecast_graph = build_forecast_graph(self.deps)
+        if run_store is not None:
+            self.__dict__["run_store"] = run_store
         settings.ensure_output_dirs()
 
+    @cached_property
+    def run_store(self) -> RunStore:
+        """Store for pipeline results (the configured database by default)."""
+        return RunStore(get_engine(self.settings.database.url))
+
     @property
-    def repository(self) -> DataRepository:
+    def repository(self) -> Repository:
         """Data repository used by the pipeline."""
         return self.deps.repository
 
@@ -127,24 +139,26 @@ class PipelineRunner:
         result.trace_path = str(save_trace(result, self.settings.outputs.traces_dir))
         return result
 
-    def save_results(self, results: Sequence[PipelineResult]) -> Path:
-        """Write results to ``outputs/runs/latest.json`` (and a timestamped copy)."""
-        payload = {
-            "created_at": utc_now(),
-            "data_source": results[0].data_source if results else None,
-            "llm": self.llm_description,
-            "results": [r.model_dump(mode="json") for r in results],
-        }
-        runs_dir = self.settings.outputs.runs_dir
-        stamp = utc_now().strftime("%Y%m%dT%H%M%S")
-        write_json(runs_dir / f"batch-{stamp}.json", payload)
-        return write_json(runs_dir / "latest.json", payload)
+    def forecast_item(self, item_id: str) -> dict[str, Any]:
+        """Run the data pipeline, Forecast and Risk agents only (no planning, not persisted)."""
+        run_id = new_run_id("forecast")
+        bind_context(run_id=run_id, item_id=item_id)
+        try:
+            state = self.forecast_graph.invoke(
+                {"run_id": run_id, "item_id": item_id, "overrides": {}, "revision_count": 0,
+                 "revision_request": None, "trace": []})
+        finally:
+            clear_context()
+        return {"run_id": run_id, "item_id": item_id, "data_source": state["data_source"],
+                "product_name": state.get("product_name"),
+                "data_quality": state["data_quality"], "forecast": state["forecast"],
+                "risk": state["risk"], "trace": state["trace"]}
+
+    def save_results(self, results: Sequence[PipelineResult]) -> int:
+        """Persist results in the run store; returns how many were saved."""
+        return self.run_store.save_many(list(results))
 
 
 def load_latest_results(settings: Settings) -> list[PipelineResult]:
-    """Load the most recent saved batch (empty list if none)."""
-    path = settings.outputs.runs_dir / "latest.json"
-    if not path.exists():
-        return []
-    payload = read_json(path)
-    return [PipelineResult.model_validate(r) for r in payload.get("results", [])]
+    """Latest pipeline run per item from the configured database."""
+    return list(RunStore(get_engine(settings.database.url)).latest_by_item().values())

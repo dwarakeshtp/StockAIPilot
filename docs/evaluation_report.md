@@ -1,6 +1,6 @@
 # Evaluation Report
 
-_Generated 2026-11-14T09:37:40 UTC from data source `m5_processed` (12 items). Regenerate with `python scripts/run_evaluation.py`._
+_Generated 2026-11-14 13:24:01 UTC from data source `sqlite:m5_raw` (12 items). Regenerate with `python scripts/run_evaluation.py`._
 
 ## 1. Forecast accuracy on unseen data
 
@@ -8,10 +8,10 @@ Each model's 7-day forecast is compared with the real M5 sales for the 7 days af
 
 |  | mae | rmse | mape | wape | n |
 |---|---|---|---|---|---|
-| agent_selected | 8.558 | 14.558 | 1.090 | 0.358 | 84 |
-| ensemble | 8.618 | 13.956 | 1.060 | 0.360 | 84 |
+| agent_selected | 8.563 | 14.562 | 1.096 | 0.358 | 84 |
+| ensemble | 8.621 | 13.958 | 1.063 | 0.360 | 84 |
 | prophet | 8.750 | 14.080 | 1.004 | 0.366 | 84 |
-| arima | 9.073 | 14.869 | 1.140 | 0.379 | 84 |
+| arima | 9.078 | 14.872 | 1.146 | 0.380 | 84 |
 | seasonal_naive | 10.167 | 18.285 | 0.939 | 0.425 | 84 |
 
 Lowest MAE: **agent_selected**. `agent_selected` is the model the Forecast Agent chose per item from the rolling-origin backtest (after any Critic revision).
@@ -26,8 +26,8 @@ Per item (agent-selected model):
 | FOODS_3_148 | 28.00 | 39.40 | 2.56 | 0.64 |
 | FOODS_3_252 | 301.00 | 269.30 | 8.64 | 0.20 |
 | FOODS_3_282 | 135.00 | 147.30 | 2.24 | 0.12 |
-| FOODS_3_351 | 55.00 | 69.30 | 4.33 | 0.55 |
-| FOODS_3_455 | 29.00 | 59.70 | 4.38 | 1.06 |
+| FOODS_3_351 | 55.00 | 69.30 | 4.34 | 0.55 |
+| FOODS_3_455 | 29.00 | 60.10 | 4.44 | 1.07 |
 | FOODS_3_519 | 118.00 | 141.60 | 7.08 | 0.42 |
 | FOODS_3_586 | 238.00 | 271.10 | 7.21 | 0.21 |
 | FOODS_3_587 | 238.00 | 221.90 | 3.49 | 0.10 |

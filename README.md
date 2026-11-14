@@ -5,10 +5,19 @@ A capstone proof of concept in which four cooperating AI agents, orchestrated wi
 **explainable reorder recommendations**. A planner reviews each recommendation (Approve /
 Modify / Reject) in a **Streamlit** dashboard.
 
+It is built like a small production system with three tiers:
+
+* **Data layer:** the M5 CSVs are loaded into **SQLite** at initialisation, covering the
+  whole CA_1 FOODS category (1,437 items, 2.79M daily rows). Agents read through a
+  repository, never from files.
+* **API layer:** a **FastAPI** backend exposes data, forecasting, inventory,
+  agent-workflow, background-job, decision and evaluation endpoints.
+* **Presentation:** a **Streamlit** dashboard that talks to the API over HTTP.
+
 ```
 Ingestion -> Cleaning -> Feature Engineering -> Forecast Agent -> Risk & Uncertainty Agent
           -> Inventory Planning Agent -> Critic Agent --(revise once)--> Forecast Agent
-                                                    \-> Dashboard + human decision
+                                                    \-> API -> Dashboard + human decision
 ```
 
 | Agent | Responsibility | Core technique |
@@ -24,19 +33,34 @@ explanations.
 
 ## Quick start
 
-Requirements: Python 3.11+ (3.11 tested).
+Requirements: Python 3.11+ (tested on 3.11 and 3.14).
 
 ```bash
 git clone <this-repo> && cd StockAIPilot
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-streamlit run dashboard/app.py
+
+python scripts/init_db.py --download --source raw   # optional: whole category from raw M5 (~450 MB download)
+scripts/dev.sh                                      # API on :8000 and dashboard on :8501
 ```
 
-The processed M5 subset (`data/processed/`), the simulated inventory parameters
-(`data/simulated/`) and the product catalog (`data/reference/`, illustrative food names for
-the anonymised M5 item codes) are committed, so the dashboard works immediately. Click **Run all** in
-the sidebar to run the agents for all 12 items (about 25 s).
+Or start the two tiers separately:
+
+```bash
+uvicorn src.api.main:app --port 8000     # API docs: http://localhost:8000/docs
+streamlit run dashboard/app.py           # talks to STOCKPILOT_API_URL (default http://localhost:8000)
+```
+
+On its first start the API creates `data/db/stockpilot.db`. If the raw M5 CSVs are in
+`data/raw/`, it loads the whole CA_1 FOODS category (about 10 s). Otherwise it loads the
+committed 12-item seed (`data/processed/`), so a fresh clone works without downloads. The
+simulated inventory parameters (`data/simulated/`) and the product catalog
+(`data/reference/`, illustrative food names for the anonymised M5 item codes) are committed
+too.
+
+In the dashboard, click **Run all** to run the agents for the 12 demo items as a background
+job (about 30 s), or use **Search all items** to analyse any other SKU. The API reference
+with curl examples is in [docs/api.md](docs/api.md).
 
 <details>
 <summary>pip blocked on your network? Use conda-forge instead</summary>
@@ -45,7 +69,7 @@ the sidebar to run the agents for all 12 items (about 25 s).
 # micromamba / mamba / conda all work
 micromamba create -p ./.venv -c conda-forge python=3.11 pandas numpy pyarrow scipy statsmodels \
   prophet pydantic pydantic-settings pyyaml python-dotenv structlog streamlit plotly pytest \
-  pytest-cov ruff langgraph langchain-core langchain-openai
+  pytest-cov ruff langgraph langchain-core langchain-openai sqlalchemy fastapi uvicorn httpx
 ```
 </details>
 
@@ -69,14 +93,24 @@ template.
 ## Command line
 
 ```bash
-python scripts/run_pipeline.py                     # all items -> outputs/runs/latest.json
-python scripts/run_pipeline.py --items FOODS_3_090 FOODS_3_519
+python scripts/init_db.py                          # create / load the database (idempotent)
+python scripts/init_db.py --source raw --rebuild   # reload from the raw CSVs (runs and decisions kept)
+python scripts/run_pipeline.py                     # demo items -> pipeline_runs table
+python scripts/run_pipeline.py --items FOODS_3_090 FOODS_3_202
 python scripts/run_evaluation.py                   # hold-out, inventory simulation, scenarios
-pytest                                             # unit + integration tests
+pytest                                             # unit, integration, API and dashboard tests
 ruff check src tests scripts dashboard
 ```
 
-Rebuild the dataset from raw M5 (optional; downloads about 450 MB):
+The same workflows over HTTP:
+
+```bash
+curl -s -X POST localhost:8000/jobs -H 'content-type: application/json' -d '{"all_demo": true}'
+curl -s localhost:8000/recommendations
+curl -s -X POST localhost:8000/forecasts/FOODS_3_090
+```
+
+Rebuild the 12-item parquet seed from raw M5 (optional):
 
 ```bash
 python scripts/build_subset.py --download          # Kaggle CLI or public GitHub mirror
@@ -98,28 +132,32 @@ Full numbers: [docs/evaluation_report.md](docs/evaluation_report.md), regenerate
 ## Project layout
 
 ```
-config/settings.yaml        all tunable parameters (horizon, service level, critic thresholds, ...)
-data/                       raw (gitignored) / processed parquet / simulated inventory params
+config/settings.yaml        all tunable parameters (horizon, service level, critic thresholds, database, api)
+data/                       raw M5 (gitignored) / db (SQLite, gitignored) / processed seed / simulated / reference
 src/
   config/                   pydantic settings + .env overrides
-  data/                     ingestion (M5 / parquet / synthetic), quality, cleaning, features, repository
+  db/                       SQLite engine, schema, loader (init_db), SQLiteRepository, run/decision/job stores
+  api/                      FastAPI app, schemas, routers (system, items, runs, jobs, decisions, evaluation)
+  services/                 pipeline, job, decision and evaluation services used by the API
+  data/                     ingestion (M5 / parquet / synthetic), quality, cleaning, features, Repository protocol
   models/                   BaseForecaster, ARIMA, Prophet, seasonal-naive, ensemble
   evaluation/               metrics, backtest, hold-out, inventory simulation, scenario eval, report
   inventory/                safety stock / ROP / ROQ / stockout formulas
   agents/                   schemas, LLM client, grounding, prompts, 4 agents, critic rules
   orchestration/            LangGraph state, graph, tracing, runner, human decisions
   logging/                  structlog JSON logging
-dashboard/                  Streamlit app (7 pages) + components (state, charts, formatting)
-scripts/                    download / build subset / run pipeline / run evaluation
+dashboard/                  Streamlit app (7 pages) + components (api_client, state, charts, formatting)
+scripts/                    init_db / dev.sh / download / build subset / run pipeline / run evaluation
 tests/                      pytest suite (synthetic data, no network)
 docs/                       architecture, agent design, dataset, roadmap, evaluation, demo script
 notebooks/                  EDA and forecasting experiments
-outputs/                    runs, traces, logs, evaluation, decisions (generated)
+outputs/                    traces, logs, evaluation (generated)
 ```
 
 ## Documentation
 
-* [Architecture & sequence diagrams](docs/architecture.md)
+* [Architecture, sequence and ER diagrams](docs/architecture.md)
+* [HTTP API reference](docs/api.md)
 * [Agent design](docs/agent_design.md)
 * [Dataset](docs/dataset.md)
 * [Implementation roadmap](docs/roadmap.md)
@@ -134,4 +172,8 @@ outputs/                    runs, traces, logs, evaluation, decisions (generated
   **simulated** (seeded) and labelled as such in the UI and in Critic issues.
 * M5 records sales, not demand. Long zero streaks on otherwise active items are treated as
   suspected stockouts and excluded from training.
-* One store, one category, 12 SKUs and a 7-day horizon, as scoped for a POC.
+* One store and one category (all 1,437 FOODS SKUs are in the database; 12 named demo
+  SKUs) and a 7-day horizon, as scoped for a POC.
+* No authentication on the API, and agent runs are serialised (one at a time). Postgres,
+  Docker and scheduled runs are natural next steps; only the SQLAlchemy URL would change for
+  Postgres.

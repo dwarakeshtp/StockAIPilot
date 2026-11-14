@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-11-14T09:37:40.391094+00:00",
-  "data_source": "m5_processed",
+  "generated_at": "2026-11-14T13:24:01.917272+00:00",
+  "data_source": "sqlite:m5_raw",
   "n_items": 12,
   "inventory_simulation": {
     "days": 56,
@@ -324,24 +324,24 @@
   "holdout_accuracy": {
     "by_model": {
       "agent_selected": {
-        "mae": 8.5581,
-        "rmse": 14.5578,
-        "mape": 1.0897,
-        "wape": 0.3578,
+        "mae": 8.5635,
+        "rmse": 14.5615,
+        "mape": 1.0956,
+        "wape": 0.3581,
         "n": 84
       },
       "arima": {
-        "mae": 9.0732,
-        "rmse": 14.8686,
-        "mape": 1.1398,
-        "wape": 0.3794,
+        "mae": 9.0779,
+        "rmse": 14.8719,
+        "mape": 1.1457,
+        "wape": 0.3796,
         "n": 84
       },
       "ensemble": {
-        "mae": 8.6185,
-        "rmse": 13.9558,
-        "mape": 1.0604,
-        "wape": 0.3604,
+        "mae": 8.6212,
+        "rmse": 13.9577,
+        "mape": 1.0633,
+        "wape": 0.3605,
         "n": 84
       },
       "prophet": {
@@ -414,48 +414,48 @@
         "item_id": "FOODS_3_282",
         "actual_7d": 135.0,
         "forecast_7d": 147.3,
-        "mae": 2.2407,
-        "rmse": 2.7565,
-        "mape": 0.1124,
-        "wape": 0.1162,
+        "mae": 2.2391,
+        "rmse": 2.7549,
+        "mape": 0.1123,
+        "wape": 0.1161,
         "n": 7
       },
       {
         "item_id": "FOODS_3_351",
         "actual_7d": 55.0,
         "forecast_7d": 69.3,
-        "mae": 4.3317,
-        "rmse": 4.9538,
-        "mape": 0.8694,
-        "wape": 0.5513,
+        "mae": 4.3386,
+        "rmse": 4.9595,
+        "mape": 0.8706,
+        "wape": 0.5522,
         "n": 7
       },
       {
         "item_id": "FOODS_3_455",
         "actual_7d": 29.0,
-        "forecast_7d": 59.7,
-        "mae": 4.3814,
-        "rmse": 4.6026,
-        "mape": 1.8355,
-        "wape": 1.0576,
+        "forecast_7d": 60.1,
+        "mae": 4.4404,
+        "rmse": 4.7395,
+        "mape": 1.9025,
+        "wape": 1.0718,
         "n": 7
       },
       {
         "item_id": "FOODS_3_519",
         "actual_7d": 118.0,
         "forecast_7d": 141.6,
-        "mae": 7.0774,
-        "rmse": 7.9236,
-        "mape": 0.6948,
-        "wape": 0.4198,
+        "mae": 7.0777,
+        "rmse": 7.9222,
+        "mape": 0.6946,
+        "wape": 0.4199,
         "n": 7
       },
       {
         "item_id": "FOODS_3_586",
         "actual_7d": 238.0,
         "forecast_7d": 271.1,
-        "mae": 7.2109,
-        "rmse": 7.9595,
+        "mae": 7.2107,
+        "rmse": 7.9594,
         "mape": 0.2688,
         "wape": 0.2121,
         "n": 7

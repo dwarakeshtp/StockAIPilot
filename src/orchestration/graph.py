@@ -9,6 +9,10 @@ Main graph::
 What-if graph (re-plans inventory for new assumptions)::
 
     START -> inventory -> critic -> END
+
+Forecast graph (demand forecast and risk, no planning or critique)::
+
+    START -> ingest -> clean -> features -> forecast -> risk -> END
 """
 
 from __future__ import annotations
@@ -27,7 +31,7 @@ from src.agents.schemas import Verdict
 from src.config.settings import Settings
 from src.data.cleaning import clean_item_sales
 from src.data.features import build_features, build_future_frame, prophet_holidays
-from src.data.repository import DataRepository
+from src.data.repository import Repository
 from src.orchestration.state import PipelineState
 from src.orchestration.tracing import summarise_model, traced_node
 
@@ -37,7 +41,7 @@ class PipelineDependencies:
     """Objects injected into graph nodes (dependency injection for testability)."""
 
     settings: Settings
-    repository: DataRepository
+    repository: Repository
     llm: LLMClient
     forecast_agent: ForecastAgent
     risk_agent: RiskAgent
@@ -48,14 +52,23 @@ class PipelineDependencies:
     def build(
         cls,
         settings: Settings,
-        repository: DataRepository | None = None,
+        repository: Repository | None = None,
         llm: LLMClient | None = None,
     ) -> PipelineDependencies:
-        """Create default agents sharing one LLM client and repository."""
+        """Create default agents sharing one LLM client and repository.
+
+        The default repository reads the SQLite database (``settings.database.url``).
+        """
+        if repository is None:
+            from src.db.loader import init_db
+            from src.db.repository import SQLiteRepository
+
+            init_db(settings, source=settings.database.init_source)
+            repository = SQLiteRepository(settings)
         llm = llm or build_llm_client(settings.llm)
         return cls(
             settings=settings,
-            repository=repository or DataRepository(settings),
+            repository=repository,
             llm=llm,
             forecast_agent=ForecastAgent(settings, llm),
             risk_agent=RiskAgent(settings, llm),
@@ -76,7 +89,7 @@ def _make_nodes(deps: PipelineDependencies) -> dict[str, Any]:
             "department": product.department,
             "raw_sales": deps.repository.item_sales(item),
             "params": deps.repository.item_inventory_params(item),
-            "data_source": deps.repository.dataset.source,
+            "data_source": deps.repository.source,
         }
 
     def clean(state: dict[str, Any]) -> dict[str, Any]:
@@ -201,6 +214,21 @@ def build_what_if_graph(deps: PipelineDependencies):
     graph.add_edge(START, "inventory")
     graph.add_edge("inventory", "critic")
     graph.add_edge("critic", END)
+    return graph.compile()
+
+
+def build_forecast_graph(deps: PipelineDependencies):
+    """Compile the data pipeline plus the Forecast and Risk agents (no planning)."""
+    nodes = _make_nodes(deps)
+    graph = StateGraph(PipelineState)
+    for name in ("ingest", "clean", "features", "forecast", "risk"):
+        graph.add_node(name, nodes[name])
+    graph.add_edge(START, "ingest")
+    graph.add_edge("ingest", "clean")
+    graph.add_edge("clean", "features")
+    graph.add_edge("features", "forecast")
+    graph.add_edge("forecast", "risk")
+    graph.add_edge("risk", END)
     return graph.compile()
 
 

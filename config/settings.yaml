@@ -76,3 +76,18 @@ llm:
 
 outputs:
   root: outputs
+
+# SQLite database (sales, prices, calendar, inventory, runs, decisions, jobs).
+# Override with STOCKPILOT_DATABASE_URL. Relative paths are anchored at the repo root.
+database:
+  url: sqlite:///data/db/stockpilot.db
+  # Load the M5 CSVs into the database when the API starts and the DB is empty.
+  init_on_startup: true
+  # auto = raw M5 CSVs if present (whole CA_1 FOODS category), else the committed 12-item seed.
+  init_source: auto
+
+# FastAPI backend. The dashboard calls base_url (override with STOCKPILOT_API_URL).
+api:
+  host: 127.0.0.1
+  port: 8000
+  base_url: http://localhost:8000
