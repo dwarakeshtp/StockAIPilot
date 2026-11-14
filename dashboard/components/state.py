@@ -7,6 +7,7 @@ import streamlit as st
 
 from src.agents.schemas import PipelineResult
 from src.config.settings import Settings, load_settings
+from src.data.catalog import Product
 from src.data.cleaning import clean_item_sales
 from src.logging.logger import configure_logging
 from src.orchestration.decisions import DecisionStore
@@ -34,6 +35,16 @@ def get_runner() -> PipelineRunner:
 def get_decision_store() -> DecisionStore:
     """Decision store backed by ``outputs/decisions.jsonl``."""
     return DecisionStore(get_settings().outputs.decisions_file)
+
+
+def get_product(item_id: str) -> Product:
+    """Display metadata (name, department) for an item code."""
+    return get_runner().repository.product(item_id)
+
+
+def product_label(item_id: str) -> str:
+    """Name plus item code, e.g. ``Bananas (FOODS_3_090)``."""
+    return get_product(item_id).label
 
 
 @st.cache_data(show_spinner=False)
@@ -90,8 +101,8 @@ def run_pipeline(item_ids: list[str]) -> None:
     bar = st.progress(0.0, text="Starting agents ...")
     done: list[PipelineResult] = []
     for idx, item in enumerate(item_ids, start=1):
-        bar.progress((idx - 1) / len(item_ids), text=f"Running agents for {item} ({idx}/"
-                                                       f"{len(item_ids)}) ...")
+        bar.progress((idx - 1) / len(item_ids),
+                     text=f"Running agents for {product_label(item)} ({idx}/{len(item_ids)}) ...")
         done.append(runner.run_item(item))
     bar.progress(1.0, text="Done")
     store_results(done)
@@ -106,7 +117,7 @@ def render_sidebar() -> None:
         st.markdown("### Controls")
         if ITEM_KEY not in st.session_state or st.session_state[ITEM_KEY] not in items:
             st.session_state[ITEM_KEY] = items[0]
-        st.selectbox("Item (SKU)", items, key=ITEM_KEY)
+        st.selectbox("Product", items, key=ITEM_KEY, format_func=product_label)
         c1, c2 = st.columns(2)
         if c1.button("Run item", help="Run all four agents for the selected item",
                      type="primary"):
@@ -126,6 +137,8 @@ def render_sidebar() -> None:
         st.caption("**LLM**")
         st.caption(f"Provider chain: `{runner.llm_description}`")
         st.badge("Inventory inputs are simulated", color="orange", icon=":material/science:")
+        st.caption("Product names are illustrative: M5 item codes are anonymised, so each "
+                   "code is labelled with a food that fits its sales pattern.")
         n = len(results())
         st.caption(f"{n} item result(s) loaded" if n else "No results yet - click **Run all**.")
 
@@ -136,4 +149,10 @@ def require_result() -> PipelineResult | None:
     if result is None:
         st.info("No agent results for this item yet. Use **Run item** or **Run all** in the "
                 "sidebar (or run `python scripts/run_pipeline.py`).")
+        return None
+    product = get_product(result.item_id)
+    st.subheader(product.name)
+    st.caption(f"{product.department} | sold per {product.unit} | item code "
+               f"`{product.item_id}`" + (f" | {product.profile_note}"
+                                          if product.profile_note else ""))
     return result

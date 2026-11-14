@@ -1,0 +1,13 @@
+item_id,product_name,department,unit,perishable,profile_note
+FOODS_3_064,White Sandwich Bread,Bakery,loaf,true,"Steady everyday staple: ~25 units/day at ~$1.14, almost never zero"
+FOODS_3_090,Bananas,Produce,bunch,true,"Top seller: ~55 units/day at ~$1.50 with frequent empty-shelf gaps"
+FOODS_3_120,Ground Beef,Meat,pack,true,"Priciest item in the set: ~$4.98, ~38 units/day"
+FOODS_3_148,Canned Black Beans,Pantry,can,false,"Slow mover: ~5 units/day at ~$1.02, many zero-sales days"
+FOODS_3_252,Large Eggs (Dozen),Dairy & Eggs,carton,true,"Very steady: ~42 units/day at ~$1.58, almost never zero"
+FOODS_3_282,Whole Milk (Half Gallon),Dairy & Eggs,carton,true,"Daily essential: ~28 units/day at ~$2.51"
+FOODS_3_351,Canned Sweet Corn,Pantry,can,false,"Slow mover: ~7 units/day at ~$1.02, many zero-sales days"
+FOODS_3_455,Shredded Cheddar Cheese,Dairy & Eggs,bag,true,"Low but steady: ~10 units/day at ~$2.24"
+FOODS_3_519,Hass Avocado,Produce,each,true,"Erratic: ~4 units/day at ~$1.00 with occasional big spikes"
+FOODS_3_586,Roma Tomatoes,Produce,lb,true,"High, steady volume: ~45 units/day at ~$1.67"
+FOODS_3_587,Orange Juice,Beverages,carton,true,"Mid volume: ~25 units/day at ~$2.48, some stockout gaps"
+FOODS_3_714,Spaghetti Pasta,Pantry,box,false,"Steady shelf-stable item: ~25 units/day at ~$1.58"

@@ -38,10 +38,11 @@ def main() -> int:
     )
     path = runner.save_results(results)
 
-    print(f"\n{'item':<14}{'model':<10}{'risk':<8}{'conf':>6}  {'action':<9}{'qty':>6}  "
-          f"{'verdict':<24}{'rev':>4}")
+    print(f"\n{'product':<26}{'item':<14}{'model':<10}{'risk':<8}{'conf':>6}  "
+          f"{'action':<9}{'qty':>6}  {'verdict':<24}{'rev':>4}")
     for r in results:
-        print(f"{r.item_id:<14}{r.forecast.model_used:<10}{r.risk.risk_level.value:<8}"
+        print(f"{(r.product_name or '-')[:25]:<26}{r.item_id:<14}{r.forecast.model_used:<10}"
+              f"{r.risk.risk_level.value:<8}"
               f"{r.risk.confidence_score:>6.1f}  {r.inventory.action.value:<9}"
               f"{r.inventory.reorder_qty:>6}  {r.critic.verdict.value:<24}{r.revision_count:>4}")
     print(f"\nSaved {len(results)} results to {path} in {time.perf_counter() - t0:.0f}s")

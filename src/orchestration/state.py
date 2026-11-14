@@ -26,6 +26,8 @@ class PipelineState(TypedDict, total=False):
 
     run_id: str
     item_id: str
+    product_name: str | None
+    department: str | None
     overrides: dict[str, float]
     data_source: str
     raw_sales: pd.DataFrame

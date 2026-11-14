@@ -262,6 +262,8 @@ class PipelineResult(BaseModel):
 
     run_id: str
     item_id: str
+    product_name: str | None = None
+    department: str | None = None
     created_at: datetime
     data_source: str
     data_quality: DataQualityReport
@@ -273,3 +275,8 @@ class PipelineResult(BaseModel):
     overrides: dict[str, float] = Field(default_factory=dict)
     trace: list[AgentTraceEntry] = Field(default_factory=list)
     trace_path: str | None = None
+
+    @property
+    def label(self) -> str:
+        """Product name plus item code (just the code when no name is known)."""
+        return f"{self.product_name} ({self.item_id})" if self.product_name else self.item_id

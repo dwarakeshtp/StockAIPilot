@@ -6,10 +6,19 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.components.charts import metrics_comparison_figure
-from dashboard.components.state import get_settings, results
+from dashboard.components.state import get_product, get_settings, results
 from src.utils.io import read_json
 
 st.title("Performance Metrics")
+
+
+def with_product(df: pd.DataFrame) -> pd.DataFrame:
+    """Insert a product-name column next to ``item_id``."""
+    if "item_id" in df.columns:
+        df.insert(int(df.columns.get_loc("item_id")), "product",
+                  df["item_id"].map(lambda i: get_product(i).name))
+    return df
+
 
 all_results = results()
 if not all_results:
@@ -19,7 +28,7 @@ if not all_results:
 rows = []
 for r in all_results.values():
     for model, m in r.forecast.metrics_by_model.items():
-        rows.append({"item_id": r.item_id, "model": model,
+        rows.append({"item_id": get_product(r.item_id).name, "model": model,
                      "selected": model == r.forecast.model_used, **m.model_dump()})
 frame = pd.DataFrame(rows)
 
@@ -73,7 +82,7 @@ if sim:
                 delta=f"{a['avg_inventory'] - n['avg_inventory']:+.0f}", delta_color="inverse")
     k[3].metric("Lost sales (units)", f"{a['lost_units']:.0f}",
                 delta=f"{a['lost_units'] - n['lost_units']:+.0f}", delta_color="inverse")
-    st.dataframe(pd.DataFrame(sim["by_item"]), hide_index=True)
+    st.dataframe(with_product(pd.DataFrame(sim["by_item"])), hide_index=True)
 
 scen = ev.get("scenario_evaluation")
 if scen:
@@ -90,4 +99,4 @@ if scen:
     k[2].metric("Verdict match", f"{scen['verdict_accuracy']:.0%}")
     k[3].metric("Grounding pass rate", f"{scen['grounding_pass_rate']:.0%}")
     k[4].metric("Scenarios", scen["n_scenarios"])
-    st.dataframe(pd.DataFrame(scen["scenarios"]), hide_index=True)
+    st.dataframe(with_product(pd.DataFrame(scen["scenarios"])), hide_index=True)

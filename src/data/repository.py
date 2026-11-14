@@ -12,6 +12,7 @@ from functools import cached_property
 import pandas as pd
 
 from src.config.settings import Settings
+from src.data.catalog import Product, fallback_product, load_catalog
 from src.data.ingestion import SalesDataset, ingest_sales
 from src.data.simulate_inventory import (
     load_inventory_params,
@@ -85,6 +86,15 @@ class DataRepository:
         if rows.empty:
             raise KeyError(f"No inventory parameters for item_id: {item_id}")
         return rows.iloc[0].to_dict()
+
+    @cached_property
+    def catalog(self) -> dict[str, Product]:
+        """Product display metadata keyed by item id."""
+        return load_catalog(self.settings.data.catalog_path)
+
+    def product(self, item_id: str) -> Product:
+        """Display metadata for one item (falls back to the item code)."""
+        return self.catalog.get(item_id) or fallback_product(item_id)
 
     def future_actuals(self, item_id: str) -> pd.DataFrame | None:
         """Observed sales after the forecast origin, if available (evaluation only)."""

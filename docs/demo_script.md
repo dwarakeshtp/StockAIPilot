@@ -13,7 +13,7 @@ to `.env` beforehand so the explanations come from the LLM; otherwise templates 
 * Walk the KPI row (orders proposed, expedites, items needing human review, order value),
   the workflow diagram and the recommendations table.
 
-## 2. Forecast Agent (1.5 min) - Forecast page, item `FOODS_3_064`
+## 2. Forecast Agent (1.5 min) - Forecast page, White Sandwich Bread (`FOODS_3_064`)
 
 * The chart shows history, suspected stockout spans, events, the 7-day forecast with its
   80% band, and overlays for ARIMA, Prophet and naive.
@@ -26,9 +26,9 @@ to `.env` beforehand so the explanations come from the LLM; otherwise templates 
 
 * The confidence gauge and its four components (accuracy, interval precision, model
   agreement, data quality).
-* Switch to `FOODS_3_519` (intermittent): low confidence, HIGH risk, anomalies flagged.
+* Switch to Hass Avocado (`FOODS_3_519`) (intermittent): low confidence, HIGH risk, anomalies flagged.
 
-## 4. Inventory Agent and what-if (1.5 min) - Inventory page, `FOODS_3_120`
+## 4. Inventory Agent and what-if (1.5 min) - Inventory page, Ground Beef (`FOODS_3_120`)
 
 * EXPEDITE: the projected stock line crosses zero before the lead time ends; SS, ROP and
   order quantity are shown with their formulas.
@@ -38,10 +38,10 @@ to `.env` beforehand so the explanations come from the LLM; otherwise templates 
 
 ## 5. Critic Agent and human decision (2 min) - Critic page
 
-* `FOODS_3_090`: **NEEDS_HUMAN_REVIEW**. The open order arrives after the projected stockout,
+* Bananas (`FOODS_3_090`): **NEEDS_HUMAN_REVIEW**. The open order arrives after the projected stockout,
   so the Critic escalates even though the Inventory Agent said HOLD. Read the explanation
   aloud.
-* `FOODS_3_519`: the Critic asked the Forecast Agent to **revise**. Backtest WAPE was 63% and
+* Hass Avocado (`FOODS_3_519`): the Critic asked the Forecast Agent to **revise**. Backtest WAPE was 63% and
   ARIMA and Prophet disagreed by 70%, so it requested the ensemble. After one revision the
   issues remain (the order relies on a low-confidence forecast), so it escalates to a human.
 * Record a decision: **Modify**, quantity 240, reason "Expedite open order instead". It
@@ -50,7 +50,7 @@ to `.env` beforehand so the explanations come from the LLM; otherwise templates 
 ## 6. Agent trace (30 s) - Agent Trace page
 
 * The timeline of nodes, including the forecast → critic → forecast loop for
-  `FOODS_3_519`. Expand a step to show its inputs, outputs, reasoning and the LLM provider.
+  Hass Avocado (`FOODS_3_519`). Expand a step to show its inputs, outputs, reasoning and the LLM provider.
   Download the JSON.
 
 ## 7. Evaluation (1 min) - Performance Metrics page

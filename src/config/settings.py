@@ -28,6 +28,7 @@ class DataSettings(BaseModel):
     raw_dir: Path = Path("data/raw")
     processed_dir: Path = Path("data/processed")
     simulated_dir: Path = Path("data/simulated")
+    reference_dir: Path = Path("data/reference")
     store_id: str = "CA_1"
     state_id: str = "CA"
     category: str = "FOODS"
@@ -36,6 +37,11 @@ class DataSettings(BaseModel):
     item_ids: list[str] = Field(default_factory=list)
     allow_synthetic_fallback: bool = True
     random_seed: int = 42
+
+    @property
+    def catalog_path(self) -> Path:
+        """Path of the product catalog (display names for item codes)."""
+        return self.reference_dir / "product_catalog.csv"
 
     @property
     def sales_path(self) -> Path:
@@ -188,6 +194,7 @@ class Settings(BaseModel):
                 "raw_dir": _anchor(self.data.raw_dir, root),
                 "processed_dir": _anchor(self.data.processed_dir, root),
                 "simulated_dir": _anchor(self.data.simulated_dir, root),
+                "reference_dir": _anchor(self.data.reference_dir, root),
             }
         )
         outputs = self.outputs.model_copy(update={"root": _anchor(self.outputs.root, root)})

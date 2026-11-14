@@ -6,7 +6,13 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.components.formatting import SEVERITY_ICONS, action_badge, risk_badge, verdict_badge
-from dashboard.components.state import get_decision_store, require_result, results
+from dashboard.components.state import (
+    get_decision_store,
+    get_product,
+    product_label,
+    require_result,
+    results,
+)
 from src.orchestration.decisions import DecisionType
 
 st.title("4. Critic Agent & Human Approval")
@@ -67,7 +73,7 @@ with st.form("decision"):
         try:
             decision = store.record(result, DecisionType(choice), reason.strip(),
                                     final_qty=int(qty), reviewer=reviewer or "planner")
-            st.success(f"Recorded {decision.decision.value} for {decision.item_id} "
+            st.success(f"Recorded {decision.decision.value} for {product_label(decision.item_id)} "
                        f"(final qty {decision.final_qty}).")
         except ValueError as exc:
             st.error(f"Decision not recorded: {exc}")
@@ -75,13 +81,16 @@ with st.form("decision"):
 history = store.load()
 if history:
     df = pd.DataFrame([d.model_dump(mode="json") for d in history])
+    df.insert(0, "product", df["item_id"].map(lambda i: get_product(i).name))
     st.markdown("**Decision log**")
-    st.dataframe(df[["decided_at", "item_id", "recommended_action", "recommended_qty", "verdict",
-                     "decision", "final_qty", "reason", "reviewer"]].iloc[::-1], hide_index=True)
+    columns = ["decided_at", "product", "item_id", "recommended_action", "recommended_qty",
+               "verdict", "decision", "final_qty", "reason", "reviewer"]
+    st.dataframe(df[columns].iloc[::-1], hide_index=True)
 
     latest = store.latest_by_item()
     po = [
-        {"item_id": d.item_id, "quantity": d.final_qty,
+        {"item_id": d.item_id, "product": get_product(d.item_id).name,
+         "department": get_product(d.item_id).department, "quantity": d.final_qty,
          "unit_cost": results()[d.item_id].inventory.params.unit_cost
          if d.item_id in results() else None,
          "decision": d.decision.value, "reviewer": d.reviewer, "reason": d.reason}

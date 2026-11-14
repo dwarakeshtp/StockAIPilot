@@ -5,7 +5,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from dashboard.components.state import get_decision_store, results
+from dashboard.components.state import get_decision_store, get_product, results
 
 st.title("Agentic Demand Forecasting & Inventory Reorder Recommendations")
 st.caption(
@@ -43,7 +43,9 @@ for r in all_results.values():
     rec = r.critic.recommendation
     decision = decisions.get(r.item_id)
     rows.append({
-        "Item": r.item_id,
+        "Product": get_product(r.item_id).name,
+        "Department": get_product(r.item_id).department,
+        "Item code": r.item_id,
         "Action": rec.action.value,
         "Qty": rec.quantity,
         "Order value": rec.order_value,
@@ -91,5 +93,5 @@ with right:
     st.bar_chart(table["Risk"].value_counts(), horizontal=True, height=150)
     st.bar_chart(table["Verdict"].value_counts(), horizontal=True, height=180)
 
-st.caption("Select an item in the sidebar and walk through the agent pages (1-4) to see how "
+st.caption("Select a product in the sidebar and walk through the agent pages (1-4) to see how "
            "each agent contributed to its recommendation.")

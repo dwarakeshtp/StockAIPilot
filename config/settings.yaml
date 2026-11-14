@@ -5,6 +5,7 @@ data:
   raw_dir: data/raw
   processed_dir: data/processed
   simulated_dir: data/simulated
+  reference_dir: data/reference
   store_id: CA_1
   state_id: CA
   category: FOODS

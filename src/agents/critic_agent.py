@@ -65,10 +65,11 @@ class CriticAgent(BaseAgent):
         return Verdict.APPROVED, None
 
     @staticmethod
-    def _headline(inv: InventoryOutput) -> str:
+    def _headline(inv: InventoryOutput, product_name: str | None = None) -> str:
+        label = f"{product_name} ({inv.item_id})" if product_name else inv.item_id
         if inv.action == InventoryAction.HOLD:
-            return f"HOLD - no new order needed for {inv.item_id}"
-        return f"{inv.action.value} {inv.reorder_qty} units of {inv.item_id}"
+            return f"HOLD - no new order needed for {label}"
+        return f"{inv.action.value} {inv.reorder_qty} units of {label}"
 
     @staticmethod
     def _rationale(inv: InventoryOutput) -> str:
@@ -84,9 +85,11 @@ class CriticAgent(BaseAgent):
         return text
 
     def _facts(self, forecast: ForecastOutput, risk: RiskOutput, inv: InventoryOutput,
-               verdict: Verdict, issues: list[ValidationIssue]) -> dict[str, Any]:
+               verdict: Verdict, issues: list[ValidationIssue],
+               product_name: str | None = None) -> dict[str, Any]:
         return {
             "item_id": inv.item_id,
+            "product_name": product_name or inv.item_id,
             "recommended_action": inv.action.value,
             "order_quantity_units": inv.reorder_qty,
             "order_value": inv.order_value,
@@ -112,11 +115,12 @@ class CriticAgent(BaseAgent):
 
     def _template_explanation(self, forecast: ForecastOutput, risk: RiskOutput,
                               inv: InventoryOutput, verdict: Verdict,
-                              issues: list[ValidationIssue]) -> str:
+                              issues: list[ValidationIssue],
+                              product_name: str | None = None) -> str:
         wape = forecast.selected_metrics.wape
         accuracy = f"backtest WAPE {wape:.0%}" if wape is not None else "limited backtest data"
         parts = [
-            f"{self._headline(inv)}.",
+            f"{self._headline(inv, product_name)}.",
             self._rationale(inv),
             f"The {forecast.model_used} model forecasts {forecast.total_forecast:.0f} units over "
             f"the next {forecast.horizon} days (about {inv.mean_daily_demand:.1f} per day, "
@@ -142,6 +146,7 @@ class CriticAgent(BaseAgent):
         data_quality: DataQualityReport,
         history_max: float,
         revision_count: int = 0,
+        product_name: str | None = None,
     ) -> CriticOutput:
         """Validate all outputs and produce the final recommendation.
 
@@ -153,6 +158,7 @@ class CriticAgent(BaseAgent):
             data_quality: Data-quality report.
             history_max: Maximum historical daily units (for plausibility checks).
             revision_count: Number of forecast revisions already performed.
+            product_name: Display name used in the headline and explanation.
 
         Returns:
             A validated :class:`CriticOutput`.
@@ -163,7 +169,7 @@ class CriticAgent(BaseAgent):
         issues = self.validate(ctx)
         verdict, revision = self.decide(issues, revision_count, forecast.model_used)
 
-        facts = self._facts(forecast, risk, inventory, verdict, issues)
+        facts = self._facts(forecast, risk, inventory, verdict, issues, product_name)
         explanation, source, grounded, ungrounded = None, "template", True, []
         self.last_llm_provider = None
         if verdict != Verdict.NEEDS_REVISION and self.llm.available:
@@ -177,7 +183,8 @@ class CriticAgent(BaseAgent):
                 else:
                     self.logger.warning("critic_explanation_ungrounded", numbers=ungrounded[:10])
         if explanation is None:
-            explanation = self._template_explanation(forecast, risk, inventory, verdict, issues)
+            explanation = self._template_explanation(forecast, risk, inventory, verdict, issues,
+                                                     product_name)
 
         key_risks = [i.message for i in issues if i.severity in ("CRITICAL", "WARNING")]
         ratio = risk.recent_to_baseline_ratio
@@ -192,7 +199,7 @@ class CriticAgent(BaseAgent):
             order_value=inventory.order_value,
             risk_level=risk.risk_level,
             confidence_score=risk.confidence_score,
-            headline=self._headline(inventory),
+            headline=self._headline(inventory, product_name),
             rationale=self._rationale(inventory),
             key_risks=key_risks,
         )

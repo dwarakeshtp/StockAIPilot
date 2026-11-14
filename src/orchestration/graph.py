@@ -70,7 +70,10 @@ def _make_nodes(deps: PipelineDependencies) -> dict[str, Any]:
 
     def ingest(state: dict[str, Any]) -> dict[str, Any]:
         item = state["item_id"]
+        product = deps.repository.product(item)
         return {
+            "product_name": None if product.name == item else product.name,
+            "department": product.department,
             "raw_sales": deps.repository.item_sales(item),
             "params": deps.repository.item_inventory_params(item),
             "data_source": deps.repository.dataset.source,
@@ -105,7 +108,8 @@ def _make_nodes(deps: PipelineDependencies) -> dict[str, Any]:
         revisions = state.get("revision_count", 0)
         out = deps.critic_agent.run(state["item_id"], state["forecast"], state["risk"],
                                     state["inventory"], state["data_quality"],
-                                    state["history_max"], revision_count=revisions)
+                                    state["history_max"], revision_count=revisions,
+                                    product_name=state.get("product_name"))
         update: dict[str, Any] = {"critic": out, "revision_request": out.revision_request}
         if out.verdict == Verdict.NEEDS_REVISION:
             update["revision_count"] = revisions + 1

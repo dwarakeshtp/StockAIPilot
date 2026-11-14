@@ -47,20 +47,30 @@ Rebuild with `python scripts/build_subset.py --download`.
 
 ## Item profile
 
-| Item | Mean units/day | Max | Zero-day share | Avg price | Suspected stockout days | Quality score |
-|---|---|---|---|---|---|---|
-| FOODS_3_064 | 25.2 | 71 | 1.0% | 1.14 | 0 | 1.00 |
-| FOODS_3_090 | 54.9 | 260 | 20.1% | 1.50 | 145 | 0.80 |
-| FOODS_3_120 | 38.5 | 157 | 11.5% | 4.98 | 16 | 0.89 |
-| FOODS_3_148 | 5.0 | 38 | 30.1% | 1.02 | 203 | 0.76 |
-| FOODS_3_252 | 41.7 | 116 | 0.3% | 1.58 | 0 | 1.00 |
-| FOODS_3_282 | 27.9 | 92 | 4.5% | 2.51 | 23 | 0.88 |
-| FOODS_3_351 | 6.6 | 38 | 27.4% | 1.02 | 196 | 0.77 |
-| FOODS_3_455 | 10.2 | 40 | 2.1% | 2.24 | 0 | 1.00 |
-| FOODS_3_519 | 4.1 | 55 | 30.7% | 1.00 | 34 | 0.88 |
-| FOODS_3_586 | 44.9 | 106 | 0.3% | 1.67 | 0 | 1.00 |
-| FOODS_3_587 | 25.2 | 80 | 11.0% | 2.48 | 78 | 0.85 |
-| FOODS_3_714 | 25.2 | 78 | 0.3% | 1.58 | 0 | 1.00 |
+| Item | Product (illustrative) | Mean units/day | Max | Zero-day share | Avg price | Suspected stockout days | Quality score |
+|---|---|---|---|---|---|---|---|
+| FOODS_3_064 | White Sandwich Bread | 25.2 | 71 | 1.0% | 1.14 | 0 | 1.00 |
+| FOODS_3_090 | Bananas | 54.9 | 260 | 20.1% | 1.50 | 145 | 0.80 |
+| FOODS_3_120 | Ground Beef | 38.5 | 157 | 11.5% | 4.98 | 16 | 0.89 |
+| FOODS_3_148 | Canned Black Beans | 5.0 | 38 | 30.1% | 1.02 | 203 | 0.76 |
+| FOODS_3_252 | Large Eggs (Dozen) | 41.7 | 116 | 0.3% | 1.58 | 0 | 1.00 |
+| FOODS_3_282 | Whole Milk (Half Gallon) | 27.9 | 92 | 4.5% | 2.51 | 23 | 0.88 |
+| FOODS_3_351 | Canned Sweet Corn | 6.6 | 38 | 27.4% | 1.02 | 196 | 0.77 |
+| FOODS_3_455 | Shredded Cheddar Cheese | 10.2 | 40 | 2.1% | 2.24 | 0 | 1.00 |
+| FOODS_3_519 | Hass Avocado | 4.1 | 55 | 30.7% | 1.00 | 34 | 0.88 |
+| FOODS_3_586 | Roma Tomatoes | 44.9 | 106 | 0.3% | 1.67 | 0 | 1.00 |
+| FOODS_3_587 | Orange Juice | 25.2 | 80 | 11.0% | 2.48 | 78 | 0.85 |
+| FOODS_3_714 | Spaghetti Pasta | 25.2 | 78 | 0.3% | 1.58 | 0 | 1.00 |
+
+## Product names (`data/reference/product_catalog.csv`)
+
+M5 anonymises products: `FOODS_3_090` means "item 90 of FOODS department 3" and the real
+product is not published. To make the demo readable, each code is mapped to an
+**illustrative** food chosen to match its sales profile. Cheap, high-volume items with empty-shelf
+gaps become Bananas; slow, erratic items become Hass Avocado or canned goods; the priciest item
+becomes Ground Beef. The catalog also stores the department, the selling unit and a
+perishable flag. Codes missing from the catalog are shown as-is, and the names never
+contain digits because the LLM grounding check treats every number as a fact to verify.
 
 ## Data quality and cleaning (`src/data/quality.py`, `cleaning.py`)
 

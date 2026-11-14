@@ -64,6 +64,8 @@ class PipelineRunner:
         result = PipelineResult(
             run_id=run_id,
             item_id=item_id,
+            product_name=state.get("product_name"),
+            department=state.get("department"),
             created_at=utc_now(),
             data_source=state["data_source"],
             data_quality=state["data_quality"],
@@ -101,6 +103,7 @@ class PipelineRunner:
             {
                 "run_id": run_id,
                 "item_id": base.item_id,
+                "product_name": base.product_name,
                 "overrides": overrides,
                 "forecast": base.forecast,
                 "risk": base.risk,

@@ -33,8 +33,9 @@ pip install -r requirements.txt
 streamlit run dashboard/app.py
 ```
 
-The processed M5 subset (`data/processed/`) and the simulated inventory parameters
-(`data/simulated/`) are committed, so the dashboard works immediately. Click **Run all** in
+The processed M5 subset (`data/processed/`), the simulated inventory parameters
+(`data/simulated/`) and the product catalog (`data/reference/`, illustrative food names for
+the anonymised M5 item codes) are committed, so the dashboard works immediately. Click **Run all** in
 the sidebar to run the agents for all 12 items (about 25 s).
 
 <details>
