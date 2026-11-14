@@ -1,0 +1,12 @@
+scenario,item_id,description,expected_flags,detected_flags,missed,unexpected,action,qty,verdict,verdict_ok
+clean_baseline,FOODS_3_252,"Stable item, healthy stock",-,-,-,-,HOLD,0,APPROVED,True
+demand_spike,FOODS_3_586,Last 7 days x2.5 (viral / promo),risk:spike,risk:spike,-,-,HOLD,0,APPROVED,True
+demand_drop,FOODS_3_064,Last 7 days x0.3 (competitor / recall),risk:drop,risk:drop,-,-,HOLD,0,APPROVED,True
+data_gaps,FOODS_3_714,40 missing days + 40-day zero streak,data_quality,data_quality,-,-,HOLD,0,APPROVED_WITH_WARNINGS,True
+noisy_history,FOODS_3_252,Heavy multiplicative noise in last 120 days,forecast_accuracy,forecast_accuracy,-,-,HOLD,0,APPROVED_WITH_WARNINGS,True
+intermittent_item,FOODS_3_519,Low-volume intermittent SKU,"forecast_accuracy, model_disagreement, revision","forecast_accuracy, high_stockout_probability, model_disagreement, revision, risk:spike",-,-,EXPEDITE,312,NEEDS_HUMAN_REVIEW,True
+long_lead_time,FOODS_3_282,"Supplier lead time 21 days, low stock",high_stockout_probability,"excessive_order, high_stockout_probability",-,-,EXPEDITE,576,APPROVED_WITH_WARNINGS,True
+zero_stock,FOODS_3_587,Out of stock today,high_stockout_probability,"high_stockout_probability, risk:spike",-,-,EXPEDITE,372,APPROVED_WITH_WARNINGS,True
+huge_moq,FOODS_3_455,"Supplier MOQ of 2,400 units",excessive_order,"excessive_order, high_stockout_probability",-,-,EXPEDITE,2400,APPROVED_WITH_WARNINGS,True
+late_open_order,FOODS_3_120,Open order arrives after stock runs out,stockout_before_open_order,stockout_before_open_order,-,-,HOLD,0,NEEDS_HUMAN_REVIEW,True
+overstocked,FOODS_3_090,60 days of cover already on hand,-,-,-,-,HOLD,0,APPROVED,True

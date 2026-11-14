@@ -1,0 +1,26 @@
+[project]
+name = "agentic-demand-forecasting"
+version = "0.1.0"
+description = "Agentic Demand Forecasting & Inventory Reorder Recommendation System (capstone POC)"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::FutureWarning",
+    "ignore::UserWarning",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["notebooks"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+ignore = ["B008"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src", "dashboard"]

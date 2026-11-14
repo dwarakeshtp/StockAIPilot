@@ -1,0 +1,13 @@
+item_id,model,stockout_days_agentic,stockout_days_naive,fill_rate_agentic,fill_rate_naive,avg_inv_agentic,avg_inv_naive,orders_agentic,orders_naive
+FOODS_3_064,arima,0,0,1.0,1.0,136.3,279.4,7,5
+FOODS_3_090,prophet,1,7,0.992,0.9228,358.4,361.5,8,4
+FOODS_3_120,arima,2,16,0.9757,0.6466,438.0,124.8,6,4
+FOODS_3_148,arima,0,0,1.0,1.0,54.1,79.0,5,4
+FOODS_3_252,arima,0,0,1.0,1.0,204.2,279.1,7,5
+FOODS_3_282,arima,2,8,0.9775,0.9072,155.0,129.8,6,4
+FOODS_3_351,arima,0,0,1.0,1.0,65.8,122.4,5,4
+FOODS_3_455,arima,1,0,0.9965,1.0,51.7,107.2,7,4
+FOODS_3_519,ensemble,1,12,0.9788,0.5965,84.0,40.1,12,4
+FOODS_3_586,arima,0,0,1.0,1.0,204.4,358.3,7,4
+FOODS_3_587,arima,1,0,0.9948,1.0,157.6,378.4,6,3
+FOODS_3_714,arima,0,8,1.0,0.8467,176.6,119.8,7,3

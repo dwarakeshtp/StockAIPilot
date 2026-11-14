@@ -1,0 +1,485 @@
+{
+  "generated_at": "2026-11-14T09:37:40.391094+00:00",
+  "data_source": "m5_processed",
+  "n_items": 12,
+  "inventory_simulation": {
+    "days": 56,
+    "totals": {
+      "agentic": {
+        "stockout_days": 8.0,
+        "lost_units": 130.2,
+        "fill_rate": 0.9923,
+        "avg_inventory": 2086.1,
+        "n_orders": 83.0
+      },
+      "naive": {
+        "stockout_days": 51.0,
+        "lost_units": 1590.8,
+        "fill_rate": 0.9054,
+        "avg_inventory": 2379.8,
+        "n_orders": 48.0
+      }
+    },
+    "by_item": [
+      {
+        "item_id": "FOODS_3_064",
+        "model": "arima",
+        "stockout_days_agentic": 0,
+        "stockout_days_naive": 0,
+        "fill_rate_agentic": 1.0,
+        "fill_rate_naive": 1.0,
+        "avg_inv_agentic": 136.3,
+        "avg_inv_naive": 279.4,
+        "orders_agentic": 7,
+        "orders_naive": 5
+      },
+      {
+        "item_id": "FOODS_3_090",
+        "model": "prophet",
+        "stockout_days_agentic": 1,
+        "stockout_days_naive": 7,
+        "fill_rate_agentic": 0.992,
+        "fill_rate_naive": 0.9228,
+        "avg_inv_agentic": 358.4,
+        "avg_inv_naive": 361.5,
+        "orders_agentic": 8,
+        "orders_naive": 4
+      },
+      {
+        "item_id": "FOODS_3_120",
+        "model": "arima",
+        "stockout_days_agentic": 2,
+        "stockout_days_naive": 16,
+        "fill_rate_agentic": 0.9757,
+        "fill_rate_naive": 0.6466,
+        "avg_inv_agentic": 438.0,
+        "avg_inv_naive": 124.8,
+        "orders_agentic": 6,
+        "orders_naive": 4
+      },
+      {
+        "item_id": "FOODS_3_148",
+        "model": "arima",
+        "stockout_days_agentic": 0,
+        "stockout_days_naive": 0,
+        "fill_rate_agentic": 1.0,
+        "fill_rate_naive": 1.0,
+        "avg_inv_agentic": 54.1,
+        "avg_inv_naive": 79.0,
+        "orders_agentic": 5,
+        "orders_naive": 4
+      },
+      {
+        "item_id": "FOODS_3_252",
+        "model": "arima",
+        "stockout_days_agentic": 0,
+        "stockout_days_naive": 0,
+        "fill_rate_agentic": 1.0,
+        "fill_rate_naive": 1.0,
+        "avg_inv_agentic": 204.2,
+        "avg_inv_naive": 279.1,
+        "orders_agentic": 7,
+        "orders_naive": 5
+      },
+      {
+        "item_id": "FOODS_3_282",
+        "model": "arima",
+        "stockout_days_agentic": 2,
+        "stockout_days_naive": 8,
+        "fill_rate_agentic": 0.9775,
+        "fill_rate_naive": 0.9072,
+        "avg_inv_agentic": 155.0,
+        "avg_inv_naive": 129.8,
+        "orders_agentic": 6,
+        "orders_naive": 4
+      },
+      {
+        "item_id": "FOODS_3_351",
+        "model": "arima",
+        "stockout_days_agentic": 0,
+        "stockout_days_naive": 0,
+        "fill_rate_agentic": 1.0,
+        "fill_rate_naive": 1.0,
+        "avg_inv_agentic": 65.8,
+        "avg_inv_naive": 122.4,
+        "orders_agentic": 5,
+        "orders_naive": 4
+      },
+      {
+        "item_id": "FOODS_3_455",
+        "model": "arima",
+        "stockout_days_agentic": 1,
+        "stockout_days_naive": 0,
+        "fill_rate_agentic": 0.9965,
+        "fill_rate_naive": 1.0,
+        "avg_inv_agentic": 51.7,
+        "avg_inv_naive": 107.2,
+        "orders_agentic": 7,
+        "orders_naive": 4
+      },
+      {
+        "item_id": "FOODS_3_519",
+        "model": "ensemble",
+        "stockout_days_agentic": 1,
+        "stockout_days_naive": 12,
+        "fill_rate_agentic": 0.9788,
+        "fill_rate_naive": 0.5965,
+        "avg_inv_agentic": 84.0,
+        "avg_inv_naive": 40.1,
+        "orders_agentic": 12,
+        "orders_naive": 4
+      },
+      {
+        "item_id": "FOODS_3_586",
+        "model": "arima",
+        "stockout_days_agentic": 0,
+        "stockout_days_naive": 0,
+        "fill_rate_agentic": 1.0,
+        "fill_rate_naive": 1.0,
+        "avg_inv_agentic": 204.4,
+        "avg_inv_naive": 358.3,
+        "orders_agentic": 7,
+        "orders_naive": 4
+      },
+      {
+        "item_id": "FOODS_3_587",
+        "model": "arima",
+        "stockout_days_agentic": 1,
+        "stockout_days_naive": 0,
+        "fill_rate_agentic": 0.9948,
+        "fill_rate_naive": 1.0,
+        "avg_inv_agentic": 157.6,
+        "avg_inv_naive": 378.4,
+        "orders_agentic": 6,
+        "orders_naive": 3
+      },
+      {
+        "item_id": "FOODS_3_714",
+        "model": "arima",
+        "stockout_days_agentic": 0,
+        "stockout_days_naive": 8,
+        "fill_rate_agentic": 1.0,
+        "fill_rate_naive": 0.8467,
+        "avg_inv_agentic": 176.6,
+        "avg_inv_naive": 119.8,
+        "orders_agentic": 7,
+        "orders_naive": 3
+      }
+    ]
+  },
+  "scenario_evaluation": {
+    "n_scenarios": 11,
+    "recall": 1.0,
+    "precision": 1.0,
+    "strict_precision": 0.6875,
+    "verdict_accuracy": 1.0,
+    "grounding_pass_rate": 1.0,
+    "recall_without_critic": 0.1818,
+    "scenarios": [
+      {
+        "scenario": "clean_baseline",
+        "item_id": "FOODS_3_252",
+        "description": "Stable item, healthy stock",
+        "expected_flags": "-",
+        "detected_flags": "-",
+        "missed": "-",
+        "unexpected": "-",
+        "action": "HOLD",
+        "qty": 0,
+        "verdict": "APPROVED",
+        "verdict_ok": true
+      },
+      {
+        "scenario": "demand_spike",
+        "item_id": "FOODS_3_586",
+        "description": "Last 7 days x2.5 (viral / promo)",
+        "expected_flags": "risk:spike",
+        "detected_flags": "risk:spike",
+        "missed": "-",
+        "unexpected": "-",
+        "action": "HOLD",
+        "qty": 0,
+        "verdict": "APPROVED",
+        "verdict_ok": true
+      },
+      {
+        "scenario": "demand_drop",
+        "item_id": "FOODS_3_064",
+        "description": "Last 7 days x0.3 (competitor / recall)",
+        "expected_flags": "risk:drop",
+        "detected_flags": "risk:drop",
+        "missed": "-",
+        "unexpected": "-",
+        "action": "HOLD",
+        "qty": 0,
+        "verdict": "APPROVED",
+        "verdict_ok": true
+      },
+      {
+        "scenario": "data_gaps",
+        "item_id": "FOODS_3_714",
+        "description": "40 missing days + 40-day zero streak",
+        "expected_flags": "data_quality",
+        "detected_flags": "data_quality",
+        "missed": "-",
+        "unexpected": "-",
+        "action": "HOLD",
+        "qty": 0,
+        "verdict": "APPROVED_WITH_WARNINGS",
+        "verdict_ok": true
+      },
+      {
+        "scenario": "noisy_history",
+        "item_id": "FOODS_3_252",
+        "description": "Heavy multiplicative noise in last 120 days",
+        "expected_flags": "forecast_accuracy",
+        "detected_flags": "forecast_accuracy",
+        "missed": "-",
+        "unexpected": "-",
+        "action": "HOLD",
+        "qty": 0,
+        "verdict": "APPROVED_WITH_WARNINGS",
+        "verdict_ok": true
+      },
+      {
+        "scenario": "intermittent_item",
+        "item_id": "FOODS_3_519",
+        "description": "Low-volume intermittent SKU",
+        "expected_flags": "forecast_accuracy, model_disagreement, revision",
+        "detected_flags": "forecast_accuracy, high_stockout_probability, model_disagreement, revision, risk:spike",
+        "missed": "-",
+        "unexpected": "-",
+        "action": "EXPEDITE",
+        "qty": 312,
+        "verdict": "NEEDS_HUMAN_REVIEW",
+        "verdict_ok": true
+      },
+      {
+        "scenario": "long_lead_time",
+        "item_id": "FOODS_3_282",
+        "description": "Supplier lead time 21 days, low stock",
+        "expected_flags": "high_stockout_probability",
+        "detected_flags": "excessive_order, high_stockout_probability",
+        "missed": "-",
+        "unexpected": "-",
+        "action": "EXPEDITE",
+        "qty": 576,
+        "verdict": "APPROVED_WITH_WARNINGS",
+        "verdict_ok": true
+      },
+      {
+        "scenario": "zero_stock",
+        "item_id": "FOODS_3_587",
+        "description": "Out of stock today",
+        "expected_flags": "high_stockout_probability",
+        "detected_flags": "high_stockout_probability, risk:spike",
+        "missed": "-",
+        "unexpected": "-",
+        "action": "EXPEDITE",
+        "qty": 372,
+        "verdict": "APPROVED_WITH_WARNINGS",
+        "verdict_ok": true
+      },
+      {
+        "scenario": "huge_moq",
+        "item_id": "FOODS_3_455",
+        "description": "Supplier MOQ of 2,400 units",
+        "expected_flags": "excessive_order",
+        "detected_flags": "excessive_order, high_stockout_probability",
+        "missed": "-",
+        "unexpected": "-",
+        "action": "EXPEDITE",
+        "qty": 2400,
+        "verdict": "APPROVED_WITH_WARNINGS",
+        "verdict_ok": true
+      },
+      {
+        "scenario": "late_open_order",
+        "item_id": "FOODS_3_120",
+        "description": "Open order arrives after stock runs out",
+        "expected_flags": "stockout_before_open_order",
+        "detected_flags": "stockout_before_open_order",
+        "missed": "-",
+        "unexpected": "-",
+        "action": "HOLD",
+        "qty": 0,
+        "verdict": "NEEDS_HUMAN_REVIEW",
+        "verdict_ok": true
+      },
+      {
+        "scenario": "overstocked",
+        "item_id": "FOODS_3_090",
+        "description": "60 days of cover already on hand",
+        "expected_flags": "-",
+        "detected_flags": "-",
+        "missed": "-",
+        "unexpected": "-",
+        "action": "HOLD",
+        "qty": 0,
+        "verdict": "APPROVED",
+        "verdict_ok": true
+      }
+    ]
+  },
+  "holdout_accuracy": {
+    "by_model": {
+      "agent_selected": {
+        "mae": 8.5581,
+        "rmse": 14.5578,
+        "mape": 1.0897,
+        "wape": 0.3578,
+        "n": 84
+      },
+      "arima": {
+        "mae": 9.0732,
+        "rmse": 14.8686,
+        "mape": 1.1398,
+        "wape": 0.3794,
+        "n": 84
+      },
+      "ensemble": {
+        "mae": 8.6185,
+        "rmse": 13.9558,
+        "mape": 1.0604,
+        "wape": 0.3604,
+        "n": 84
+      },
+      "prophet": {
+        "mae": 8.7503,
+        "rmse": 14.0799,
+        "mape": 1.0042,
+        "wape": 0.3659,
+        "n": 84
+      },
+      "seasonal_naive": {
+        "mae": 10.1667,
+        "rmse": 18.2854,
+        "mape": 0.9385,
+        "wape": 0.4251,
+        "n": 84
+      }
+    },
+    "by_item": [
+      {
+        "item_id": "FOODS_3_064",
+        "actual_7d": 195.0,
+        "forecast_7d": 192.6,
+        "mae": 4.8763,
+        "rmse": 7.3037,
+        "mape": 0.2015,
+        "wape": 0.175,
+        "n": 7
+      },
+      {
+        "item_id": "FOODS_3_090",
+        "actual_7d": 387.0,
+        "forecast_7d": 328.7,
+        "mae": 20.5411,
+        "rmse": 25.3821,
+        "mape": 0.3921,
+        "wape": 0.3715,
+        "n": 7
+      },
+      {
+        "item_id": "FOODS_3_120",
+        "actual_7d": 136.0,
+        "forecast_7d": 345.6,
+        "mae": 31.2716,
+        "rmse": 38.7836,
+        "mape": 9.5028,
+        "wape": 1.6096,
+        "n": 7
+      },
+      {
+        "item_id": "FOODS_3_148",
+        "actual_7d": 28.0,
+        "forecast_7d": 39.4,
+        "mae": 2.5621,
+        "rmse": 2.9349,
+        "mape": 0.9972,
+        "wape": 0.6405,
+        "n": 7
+      },
+      {
+        "item_id": "FOODS_3_252",
+        "actual_7d": 301.0,
+        "forecast_7d": 269.3,
+        "mae": 8.6419,
+        "rmse": 9.1503,
+        "mape": 0.2151,
+        "wape": 0.201,
+        "n": 7
+      },
+      {
+        "item_id": "FOODS_3_282",
+        "actual_7d": 135.0,
+        "forecast_7d": 147.3,
+        "mae": 2.2407,
+        "rmse": 2.7565,
+        "mape": 0.1124,
+        "wape": 0.1162,
+        "n": 7
+      },
+      {
+        "item_id": "FOODS_3_351",
+        "actual_7d": 55.0,
+        "forecast_7d": 69.3,
+        "mae": 4.3317,
+        "rmse": 4.9538,
+        "mape": 0.8694,
+        "wape": 0.5513,
+        "n": 7
+      },
+      {
+        "item_id": "FOODS_3_455",
+        "actual_7d": 29.0,
+        "forecast_7d": 59.7,
+        "mae": 4.3814,
+        "rmse": 4.6026,
+        "mape": 1.8355,
+        "wape": 1.0576,
+        "n": 7
+      },
+      {
+        "item_id": "FOODS_3_519",
+        "actual_7d": 118.0,
+        "forecast_7d": 141.6,
+        "mae": 7.0774,
+        "rmse": 7.9236,
+        "mape": 0.6948,
+        "wape": 0.4198,
+        "n": 7
+      },
+      {
+        "item_id": "FOODS_3_586",
+        "actual_7d": 238.0,
+        "forecast_7d": 271.1,
+        "mae": 7.2109,
+        "rmse": 7.9595,
+        "mape": 0.2688,
+        "wape": 0.2121,
+        "n": 7
+      },
+      {
+        "item_id": "FOODS_3_587",
+        "actual_7d": 238.0,
+        "forecast_7d": 221.9,
+        "mae": 3.4944,
+        "rmse": 4.278,
+        "mape": 0.0958,
+        "wape": 0.1028,
+        "n": 7
+      },
+      {
+        "item_id": "FOODS_3_714",
+        "actual_7d": 149.0,
+        "forecast_7d": 127.0,
+        "mae": 6.0681,
+        "rmse": 7.1612,
+        "mape": 0.2816,
+        "wape": 0.2851,
+        "n": 7
+      }
+    ]
+  }
+}

@@ -1,0 +1,77 @@
+# Central configuration for the Agentic Demand Forecasting POC.
+# Environment variables (see .env.example) override the `llm` section.
+
+data:
+  raw_dir: data/raw
+  processed_dir: data/processed
+  simulated_dir: data/simulated
+  store_id: CA_1
+  state_id: CA
+  category: FOODS
+  n_items: 12
+  history_days: 730
+  # Leave empty to auto-select a volume mix of items from the category.
+  item_ids: []
+  # Use a synthetic M5-shaped dataset if the processed M5 subset is missing.
+  allow_synthetic_fallback: true
+  random_seed: 42
+
+forecast:
+  horizon: 7
+  backtest_folds: 4
+  interval_width: 0.8
+  seasonal_period: 7
+  arima_fit_window: 365
+  arima_order_grid:
+    - [1, 0, 1]
+    - [2, 0, 1]
+    - [1, 1, 1]
+  arima_seasonal_order: [1, 0, 1]
+  prophet_uncertainty_samples: 300
+  selection_metric: mae
+
+risk:
+  lookback_days: 90
+  zscore_window: 28
+  zscore_threshold: 3.0
+  iqr_multiplier: 3.0
+  spike_ratio: 1.5
+  recent_anomaly_days: 14
+  interval_width_cap: 2.0
+  weights:
+    accuracy: 0.4
+    precision: 0.3
+    agreement: 0.2
+    data_quality: 0.1
+  high_threshold: 45
+  low_threshold: 70
+  uncertainty_multipliers:
+    LOW: 1.0
+    MEDIUM: 1.2
+    HIGH: 1.4
+
+inventory:
+  service_level: 0.95
+  review_period_days: 7
+  ordering_cost: 25.0
+
+critic:
+  max_revisions: 1
+  model_disagreement_threshold: 0.35
+  wape_threshold: 0.6
+  max_days_of_cover: 30
+  safety_stock_max_lt_multiple: 1.5
+  low_confidence_threshold: 45
+  large_order_days: 14
+  min_data_quality_score: 0.8
+  high_stockout_probability: 0.5
+
+llm:
+  provider: none
+  temperature: 0.2
+  timeout_seconds: 30
+  max_tokens: 400
+  narrate_all_agents: true
+
+outputs:
+  root: outputs

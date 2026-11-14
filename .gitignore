@@ -27,3 +27,4 @@ outputs/decisions.jsonl
 # OS / IDE
 .DS_Store
 .ipynb_checkpoints/
+outputs/evaluation/scenario_runs/
