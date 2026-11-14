@@ -1,5 +1,5 @@
 # Python 3.11+ (Prophet does not yet ship wheels for the newest CPython releases).
-# Versions below were verified together on Python 3.11 (macOS arm64).
+# Versions below were verified together on Python 3.11 (macOS)
 
 # Core data
 pandas>=2.2,<3.0
