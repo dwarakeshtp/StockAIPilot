@@ -176,6 +176,32 @@ class OutputSettings(BaseModel):
         return self.root / "decisions.jsonl"
 
 
+SQLITE_PREFIX = "sqlite:///"
+
+
+class DatabaseSettings(BaseModel):
+    """SQLite database holding sales, inventory, runs, decisions and jobs."""
+
+    url: str = "sqlite:///data/db/stockpilot.db"
+    init_on_startup: bool = True
+    init_source: Literal["auto", "raw", "processed"] = "auto"
+
+    @property
+    def sqlite_path(self) -> Path | None:
+        """Filesystem path of a file-based SQLite URL (``None`` otherwise)."""
+        if not self.url.startswith(SQLITE_PREFIX) or self.url == SQLITE_PREFIX + ":memory:":
+            return None
+        return Path(self.url.removeprefix(SQLITE_PREFIX))
+
+
+class ApiSettings(BaseModel):
+    """FastAPI server location (the dashboard reads ``base_url``)."""
+
+    host: str = "127.0.0.1"
+    port: int = 8000
+    base_url: str = "http://localhost:8000"
+
+
 class Settings(BaseModel):
     """Root settings object aggregating every section."""
 
@@ -186,6 +212,8 @@ class Settings(BaseModel):
     critic: CriticSettings = Field(default_factory=CriticSettings)
     llm: LLMSettings = Field(default_factory=LLMSettings)
     outputs: OutputSettings = Field(default_factory=OutputSettings)
+    database: DatabaseSettings = Field(default_factory=DatabaseSettings)
+    api: ApiSettings = Field(default_factory=ApiSettings)
 
     def resolve_paths(self, root: Path = PROJECT_ROOT) -> Settings:
         """Return a copy where every relative path is anchored at ``root``."""
@@ -198,7 +226,12 @@ class Settings(BaseModel):
             }
         )
         outputs = self.outputs.model_copy(update={"root": _anchor(self.outputs.root, root)})
-        return self.model_copy(update={"data": data, "outputs": outputs})
+        database = self.database
+        db_path = database.sqlite_path
+        if db_path is not None and not db_path.is_absolute():
+            database = database.model_copy(
+                update={"url": SQLITE_PREFIX + str(_anchor(db_path, root))})
+        return self.model_copy(update={"data": data, "outputs": outputs, "database": database})
 
     def ensure_output_dirs(self) -> None:
         """Create every output directory if it does not exist."""
@@ -222,6 +255,10 @@ _ENV_TO_LLM_FIELD: dict[str, str] = {
     "OPENROUTER_MODEL": "openrouter_model",
     "COHERE_API_KEY": "cohere_api_key",
     "COHERE_MODEL": "cohere_model",
+}
+_ENV_TO_FIELD: dict[str, tuple[str, str]] = {
+    "STOCKPILOT_DATABASE_URL": ("database", "url"),
+    "STOCKPILOT_API_URL": ("api", "base_url"),
 }
 
 
@@ -253,6 +290,10 @@ def load_settings(config_path: Path | None = None, load_env: bool = True) -> Set
             raw = yaml.safe_load(handle) or {}
     llm_section = {**raw.get("llm", {}), **_llm_env_overrides()}
     raw["llm"] = llm_section
+    for env_name, (section, field_name) in _ENV_TO_FIELD.items():
+        value = os.getenv(env_name)
+        if value:
+            raw[section] = {**(raw.get(section) or {}), field_name: value.strip()}
     return Settings.model_validate(raw).resolve_paths()
 
 

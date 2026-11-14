@@ -7,13 +7,13 @@ from collections.abc import Sequence
 import pandas as pd
 
 from src.agents.schemas import PipelineResult
-from src.data.repository import DataRepository
+from src.data.repository import Repository
 from src.evaluation.metrics import compute_metrics
 
 SELECTED = "agent_selected"
 
 
-def holdout_accuracy(results: Sequence[PipelineResult], repository: DataRepository) -> dict:
+def holdout_accuracy(results: Sequence[PipelineResult], repository: Repository) -> dict:
     """Compare each model's 7-day forecast with the observed sales.
 
     Returns:

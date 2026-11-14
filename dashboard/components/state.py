@@ -1,45 +1,76 @@
-"""Shared dashboard state: cached runner, results and sidebar controls."""
+"""Shared dashboard state: API access, cached results and sidebar controls.
+
+All data comes from the FastAPI backend through :mod:`dashboard.components.api_client`.
+"""
 
 from __future__ import annotations
+
+import time
 
 import pandas as pd
 import streamlit as st
 
+from dashboard.components.api_client import ApiError, StockPilotClient, get_client
 from src.agents.schemas import PipelineResult
 from src.config.settings import Settings, load_settings
-from src.data.catalog import Product
-from src.data.cleaning import clean_item_sales
-from src.logging.logger import configure_logging
-from src.orchestration.decisions import DecisionStore
-from src.orchestration.runner import PipelineRunner, load_latest_results
+from src.data.catalog import Product, fallback_product
 
 RESULTS_KEY = "results"
 WHATIF_KEY = "what_if_results"
 ITEM_KEY = "selected_item"
+EXTRA_ITEMS_KEY = "extra_items"
+PRODUCTS_KEY = "products"
+SEARCH_PICK_KEY = "search_pick"
+JOB_POLL_SECONDS = 1.0
 
 
 @st.cache_resource(show_spinner=False)
 def get_settings() -> Settings:
-    """Application settings (cached for the server lifetime)."""
-    settings = load_settings()
-    configure_logging(settings.outputs.logs_dir, level="WARNING")
-    return settings
+    """Application settings (UI defaults only; data comes from the API)."""
+    return load_settings()
 
 
-@st.cache_resource(show_spinner="Loading data and agents ...")
-def get_runner() -> PipelineRunner:
-    """The pipeline runner (agents, graph, repository) - created once."""
-    return PipelineRunner(get_settings())
+def api() -> StockPilotClient:
+    """The API client."""
+    return get_client()
 
 
-def get_decision_store() -> DecisionStore:
-    """Decision store backed by ``outputs/decisions.jsonl``."""
-    return DecisionStore(get_settings().outputs.decisions_file)
+def system_info() -> dict:
+    """Backend info, fetched once per session."""
+    if "system_info" not in st.session_state:
+        st.session_state["system_info"] = api().system_info()
+    return st.session_state["system_info"]
+
+
+def _products() -> dict[str, Product]:
+    return st.session_state.setdefault(PRODUCTS_KEY, {})
+
+
+def _remember(rows: list[dict]) -> None:
+    fields = set(Product.model_fields)
+    for row in rows:
+        _products()[row["item_id"]] = Product(**{k: v for k, v in row.items() if k in fields})
+
+
+def demo_items() -> list[str]:
+    """Demo item ids (cached per session)."""
+    if "demo_items" not in st.session_state:
+        page = api().items(demo_only=True, limit=500)
+        _remember(page["items"])
+        st.session_state["demo_items"] = [r["item_id"] for r in page["items"]]
+    return st.session_state["demo_items"]
 
 
 def get_product(item_id: str) -> Product:
     """Display metadata (name, department) for an item code."""
-    return get_runner().repository.product(item_id)
+    product = _products().get(item_id)
+    if product is None:
+        try:
+            _remember([api().item(item_id)["item"]])
+            product = _products()[item_id]
+        except ApiError:
+            product = fallback_product(item_id)
+    return product
 
 
 def product_label(item_id: str) -> str:
@@ -47,41 +78,36 @@ def product_label(item_id: str) -> str:
     return get_product(item_id).label
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=600)
 def get_history(item_id: str) -> pd.DataFrame:
     """Cleaned daily history of an item (with stockout flags)."""
-    clean, _ = clean_item_sales(get_runner().repository.item_sales(item_id))
-    return clean
+    return api().history(item_id)
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=600)
 def get_future_actuals(item_id: str) -> pd.DataFrame | None:
     """Observed sales after the forecast origin (evaluation only)."""
-    return get_runner().repository.future_actuals(item_id)
+    return api().actuals(item_id)
 
 
 def results() -> dict[str, PipelineResult]:
-    """Results by item, loaded from the last saved batch on first access."""
+    """Latest stored run per item, loaded from the API on first access."""
     if RESULTS_KEY not in st.session_state:
-        st.session_state[RESULTS_KEY] = {
-            r.item_id: r for r in load_latest_results(get_settings())
-        }
+        st.session_state[RESULTS_KEY] = api().latest_runs()
     return st.session_state[RESULTS_KEY]
 
 
 def what_if_results() -> dict[str, PipelineResult]:
-    """What-if results by item (session only)."""
+    """What-if results by item (session only; also stored server-side)."""
     return st.session_state.setdefault(WHATIF_KEY, {})
 
 
-def store_results(new_results: list[PipelineResult], persist: bool = True) -> None:
-    """Merge new results into the session and optionally persist the full batch."""
+def store_results(new_results: list[PipelineResult]) -> None:
+    """Merge freshly fetched results into the session."""
     current = results()
     for r in new_results:
         current[r.item_id] = r
         what_if_results().pop(r.item_id, None)
-    if persist and current:
-        get_runner().save_results(list(current.values()))
 
 
 def selected_item() -> str | None:
@@ -96,49 +122,97 @@ def selected_result() -> PipelineResult | None:
 
 
 def run_pipeline(item_ids: list[str]) -> None:
-    """Run the agent pipeline for ``item_ids`` with a progress bar."""
-    runner = get_runner()
-    bar = st.progress(0.0, text="Starting agents ...")
-    done: list[PipelineResult] = []
-    for idx, item in enumerate(item_ids, start=1):
-        bar.progress((idx - 1) / len(item_ids),
-                     text=f"Running agents for {product_label(item)} ({idx}/{len(item_ids)}) ...")
-        done.append(runner.run_item(item))
+    """Queue a background job on the API and poll it to drive a progress bar."""
+    client = api()
+    job = client.submit_job(item_ids)
+    bar = st.progress(0.0, text="Job queued ...")
+    while job["status"] in ("queued", "running"):
+        time.sleep(JOB_POLL_SECONDS)
+        job = client.job(job["job_id"])
+        current = job["item_ids"][min(job["done"], job["total"] - 1)]
+        bar.progress(job["progress"], text=f"Running agents for {product_label(current)} "
+                                           f"({min(job['done'] + 1, job['total'])}/"
+                                           f"{job['total']}) ...")
     bar.progress(1.0, text="Done")
-    store_results(done)
+    store_results(list(client.latest_runs(job["item_ids"]).values()))
     bar.empty()
+    for error in job["errors"]:
+        st.sidebar.error(error)
+
+
+def _pick_search_result() -> None:
+    """Callback: add the picked search result to the product list and select it."""
+    item = st.session_state.get(SEARCH_PICK_KEY)
+    if item:
+        extra = st.session_state.setdefault(EXTRA_ITEMS_KEY, [])
+        if item not in extra:
+            extra.append(item)
+        st.session_state[ITEM_KEY] = item
+
+
+def _render_search(total_items: int) -> None:
+    query = st.text_input(f"Search all {total_items:,} items", placeholder="e.g. FOODS_3_2 "
+                          "or milk", help="Any item of the store/category can be analysed.")
+    if not query:
+        return
+    page = api().items(search=query, limit=25)
+    _remember(page["items"])
+    ids = [r["item_id"] for r in page["items"]]
+    if not ids:
+        st.caption("No matching items.")
+        return
+    st.selectbox(f"{page['total']} match(es)", [None, *ids], key=SEARCH_PICK_KEY,
+                 format_func=lambda i: "Choose an item ..." if i is None else product_label(i),
+                 on_change=_pick_search_result)
+
+
+def _api_unavailable(exc: ApiError) -> None:
+    with st.sidebar:
+        st.error("Backend API unavailable", icon=":material/cloud_off:")
+    st.error(f"**The StockPilot API is not reachable.** {exc.detail}")
+    st.markdown("Start the API in another terminal, then reload this page:")
+    st.code("uvicorn src.api.main:app --port 8000", language="bash")
+    st.caption("Or run both together with `scripts/dev.sh`. Set `STOCKPILOT_API_URL` if the "
+               "API runs elsewhere.")
+    st.stop()
 
 
 def render_sidebar() -> None:
-    """Sidebar with item picker, run controls and system status."""
-    runner = get_runner()
-    items = runner.repository.item_ids
+    """Sidebar with item picker, search, run controls and system status."""
+    try:
+        info = system_info()
+        demo = demo_items()
+    except ApiError as exc:
+        _api_unavailable(exc)
+        return
+    items = demo + [i for i in st.session_state.get(EXTRA_ITEMS_KEY, []) if i not in demo]
     with st.sidebar:
         st.markdown("### Controls")
         if ITEM_KEY not in st.session_state or st.session_state[ITEM_KEY] not in items:
             st.session_state[ITEM_KEY] = items[0]
         st.selectbox("Product", items, key=ITEM_KEY, format_func=product_label)
+        _render_search(info["items"])
         c1, c2 = st.columns(2)
         if c1.button("Run item", help="Run all four agents for the selected item",
                      type="primary"):
             run_pipeline([st.session_state[ITEM_KEY]])
             st.rerun()
-        if c2.button("Run all", help=f"Run the pipeline for all {len(items)} items (~30s)"):
-            run_pipeline(items)
+        if c2.button("Run all", help=f"Run the pipeline for the {len(demo)} demo items "
+                                     "as a background job (~30s)"):
+            run_pipeline(demo)
             st.rerun()
 
         st.divider()
-        dataset = runner.repository.dataset
         st.caption("**Data**")
-        st.caption(f"Source: `{dataset.source}` - {len(items)} items, "
-                   f"{dataset.sales['date'].min().date()} to {dataset.last_date.date()}")
-        st.caption(f"Forecast origin: {dataset.last_date.date()} | horizon "
-                   f"{get_settings().forecast.horizon} days")
-        st.caption("**LLM**")
-        st.caption(f"Provider chain: `{runner.llm_description}`")
+        st.caption(f"Source: `{info['data_source']}` - {info['items']:,} items "
+                   f"({len(demo)} demo), {info['history_start']} to {info['history_end']}")
+        st.caption(f"Forecast origin: {info['forecast_origin']} | horizon "
+                   f"{info['horizon_days']} days")
+        st.caption("**Backend**")
+        st.caption(f"API: `{api().base_url}` | LLM: `{info['llm']}`")
         st.badge("Inventory inputs are simulated", color="orange", icon=":material/science:")
         st.caption("Product names are illustrative: M5 item codes are anonymised, so each "
-                   "code is labelled with a food that fits its sales pattern.")
+                   "demo code is labelled with a food that fits its sales pattern.")
         n = len(results())
         st.caption(f"{n} item result(s) loaded" if n else "No results yet - click **Run all**.")
 
@@ -148,7 +222,7 @@ def require_result() -> PipelineResult | None:
     result = selected_result()
     if result is None:
         st.info("No agent results for this item yet. Use **Run item** or **Run all** in the "
-                "sidebar (or run `python scripts/run_pipeline.py`).")
+                "sidebar (or `POST /jobs` on the API).")
         return None
     product = get_product(result.item_id)
     st.subheader(product.name)

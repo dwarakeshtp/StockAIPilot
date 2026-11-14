@@ -5,14 +5,9 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from dashboard.components.api_client import ApiError
 from dashboard.components.formatting import SEVERITY_ICONS, action_badge, risk_badge, verdict_badge
-from dashboard.components.state import (
-    get_decision_store,
-    get_product,
-    product_label,
-    require_result,
-    results,
-)
+from dashboard.components.state import api, get_product, product_label, require_result
 from src.orchestration.decisions import DecisionType
 
 st.title("4. Critic Agent & Human Approval")
@@ -62,23 +57,25 @@ with st.expander("Critic reasoning"):
 
 st.divider()
 st.subheader("Planner decision")
-store = get_decision_store()
 with st.form("decision"):
     choice = st.radio("Decision", [d.value for d in DecisionType], horizontal=True)
-    qty = st.number_input("Final quantity (used when MODIFIED)", min_value=0,
-                          value=int(rec.quantity), step=max(result.inventory.params.pack_size, 1))
-    reason = st.text_area("Reason (required)", placeholder="e.g. Supplier confirmed lead time")
+    qty = st.number_input("Final quantity (only used when MODIFIED)", min_value=0,
+                          value=int(rec.quantity), step=max(result.inventory.params.pack_size, 1),
+                          help=f"Recommended: {rec.quantity} units. APPROVED keeps it, "
+                               "REJECTED sets it to 0.")
+    reason = st.text_area("Reason (optional for APPROVED, required for MODIFIED / REJECTED)",
+                          placeholder="e.g. Supplier confirmed a shorter lead time")
     reviewer = st.text_input("Reviewer", value="planner")
     if st.form_submit_button("Submit decision", type="primary"):
         try:
-            decision = store.record(result, DecisionType(choice), reason.strip(),
-                                    final_qty=int(qty), reviewer=reviewer or "planner")
+            decision = api().record_decision(result.run_id, DecisionType(choice), reason.strip(),
+                                             final_qty=int(qty), reviewer=reviewer or "planner")
             st.success(f"Recorded {decision.decision.value} for {product_label(decision.item_id)} "
                        f"(final qty {decision.final_qty}).")
-        except ValueError as exc:
-            st.error(f"Decision not recorded: {exc}")
+        except ApiError as exc:
+            st.error(f"Decision not recorded: {exc.detail}")
 
-history = store.load()
+history = api().decisions()
 if history:
     df = pd.DataFrame([d.model_dump(mode="json") for d in history])
     df.insert(0, "product", df["item_id"].map(lambda i: get_product(i).name))
@@ -87,17 +84,7 @@ if history:
                "verdict", "decision", "final_qty", "reason", "reviewer"]
     st.dataframe(df[columns].iloc[::-1], hide_index=True)
 
-    latest = store.latest_by_item()
-    po = [
-        {"item_id": d.item_id, "product": get_product(d.item_id).name,
-         "department": get_product(d.item_id).department, "quantity": d.final_qty,
-         "unit_cost": results()[d.item_id].inventory.params.unit_cost
-         if d.item_id in results() else None,
-         "decision": d.decision.value, "reviewer": d.reviewer, "reason": d.reason}
-        for d in latest.values()
-        if d.decision != DecisionType.REJECTED and d.final_qty > 0
-    ]
-    if po:
-        st.download_button("Download approved purchase-order draft (CSV)",
-                           pd.DataFrame(po).to_csv(index=False), file_name="po_draft.csv",
-                           mime="text/csv")
+    po_csv = api().po_draft_csv()
+    if len(po_csv.strip().splitlines()) > 1:
+        st.download_button("Download approved purchase-order draft (CSV)", po_csv,
+                           file_name="po_draft.csv", mime="text/csv")

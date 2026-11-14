@@ -9,7 +9,12 @@ import pytest
 from pydantic import ValidationError
 
 from src.agents.schemas import PipelineResult, RevisionHint, Verdict
-from src.orchestration.decisions import Decision, DecisionStore, DecisionType
+from src.orchestration.decisions import (
+    DEFAULT_APPROVAL_REASON,
+    Decision,
+    DecisionStore,
+    DecisionType,
+)
 from src.orchestration.graph import pipeline_mermaid
 from src.orchestration.runner import PipelineRunner, load_latest_results
 
@@ -87,8 +92,9 @@ def test_decision_store(tmp_path, result) -> None:
     store = DecisionStore(tmp_path / "decisions.jsonl")
     approved = store.record(result, DecisionType.APPROVED, "looks right")
     assert approved.final_qty == result.critic.recommendation.quantity
-    modified = store.record(result, DecisionType.MODIFIED, "supplier cap", final_qty=24)
-    assert modified.final_qty == 24
+    new_qty = result.critic.recommendation.quantity + 6
+    modified = store.record(result, DecisionType.MODIFIED, "supplier cap", final_qty=new_qty)
+    assert modified.final_qty == new_qty
     rejected = store.record(result, DecisionType.REJECTED, "promo cancelled")
     assert rejected.final_qty == 0
     assert len(store.load()) == 3
@@ -102,3 +108,20 @@ def test_decision_validation() -> None:
     with pytest.raises(ValidationError):
         Decision(run_id="r", item_id="X", recommended_action="REORDER", recommended_qty=10,
                  verdict="APPROVED", decision=DecisionType.REJECTED, final_qty=0, reason="")
+
+
+def test_approval_without_reason_uses_default(tmp_path, result) -> None:
+    store = DecisionStore(tmp_path / "decisions.jsonl")
+    approved = store.record(result, DecisionType.APPROVED, "  ")
+    assert approved.reason == DEFAULT_APPROVAL_REASON
+
+
+def test_decision_store_raises_plain_messages(tmp_path, result) -> None:
+    store = DecisionStore(tmp_path / "decisions.jsonl")
+    with pytest.raises(ValueError, match="Please give a reason") as exc:
+        store.record(result, DecisionType.REJECTED, "")
+    assert "pydantic" not in str(exc.value)
+    with pytest.raises(ValueError, match="equals the recommendation"):
+        store.record(result, DecisionType.MODIFIED, "same qty",
+                     final_qty=result.critic.recommendation.quantity)
+    assert store.load() == []

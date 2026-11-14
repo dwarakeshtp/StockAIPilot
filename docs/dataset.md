@@ -11,7 +11,33 @@ training, used only for the hold-out evaluation), `calendar.csv` and `sell_price
 `scripts/download_m5.py` tries the Kaggle CLI first and then a public GitHub mirror
 (Nixtla `m5-forecasts`).
 
-## POC subset
+## Runtime database (`data/db/stockpilot.db`)
+
+At runtime every layer reads the data from **SQLite**, not from CSV or parquet files.
+`scripts/init_db.py` (or the API on its first start) loads the database:
+
+| Source (`--source`) | When | Contents |
+|---|---|---|
+| `raw` | `data/raw/` has the M5 CSVs (`auto` picks it first) | Whole CA_1 FOODS category: 1,437 items x 1,941 days = 2,789,217 sales rows, 1,969 calendar days, 5,570 price spells, 40,236 hold-out rows. Loads in about 10 s |
+| `processed` | Raw CSVs absent (fresh clone) | The committed 12-item parquet seed described below (8,760 sales rows, 336 hold-out rows) |
+| synthetic | Neither available and `allow_synthetic_fallback: true` | Generated M5-shaped data (development only) |
+
+Tables: `items` (with catalog names and an `is_demo` flag), `calendar`, `daily_sales`,
+`prices` (price spells: one row per run of days with the same price), `sales_holdout`,
+`inventory_positions`, plus the application tables `pipeline_runs`, `decisions` and `jobs`.
+See the ER diagram in [architecture.md](architecture.md#5-data-layer-and-persistence).
+
+* **Demo items.** The 12 SKUs below are flagged `is_demo` and are the default set for
+  "Run all" and `POST /jobs {"all_demo": true}`. Any other SKU can be analysed through the
+  dashboard search, `POST /runs` or `scripts/run_pipeline.py --items`.
+* **History window.** `SQLiteRepository` serves the last `data.history_days` (730) per item
+  from the `v_daily_sales` view, ending at the forecast origin 2016-05-22. The database keeps
+  the full history back to 2011-01-29.
+* **Parity.** For the demo items, the SQLite frames are identical to the parquet frames
+  (values and dtypes; enforced by `tests/test_db.py`), so forecasts, recommendations and
+  evaluation numbers are unchanged.
+
+## POC subset (demo items and fallback seed)
 
 | Dimension | Value | Why |
 |---|---|---|
@@ -31,14 +57,14 @@ rather than cherry-picking smooth series.
 
 Rebuild with `python scripts/build_subset.py --download`.
 
-## Schema - `data/processed/sales_subset.parquet` (8,760 rows)
+## Pipeline input schema (`v_daily_sales` / `sales_subset.parquet`)
 
 | Column | Type | Description |
 |---|---|---|
 | `date` | datetime | Calendar day |
 | `item_id`, `dept_id`, `cat_id`, `store_id` | str | Hierarchy |
 | `units` | float | Units sold |
-| `sell_price` | float | Weekly price (forward or back filled) |
+| `sell_price` | float | Price on that day (M5 weekly price, stored as price spells) |
 | `event_name`, `event_type` | str | M5 calendar events (30 distinct in the window; empty if none) |
 | `snap` | int | SNAP benefits day for California (33% of days) |
 
@@ -103,7 +129,10 @@ carried forward.
 ## Simulated inventory parameters (`data/simulated/inventory_params.csv`)
 
 M5 contains no inventory, so `src/data/simulate_inventory.py` generates seeded, reproducible
-values (seed 42).
+values (seed 42). The loader writes them to the `inventory_positions` table: demo items keep
+the committed CSV values, and every other item is simulated with the same generator.
+`PUT /items/{id}/inventory` overwrites a row (for example after a stock count) and sets
+`is_simulated` to `False`.
 
 | Field | Generation |
 |---|---|
@@ -112,10 +141,11 @@ values (seed 42).
 | `lead_time_days`, `lead_time_std` | 2-10 days; std uniform between 0.3 and 0.3 × lead time |
 | `moq`, `pack_size` | Case packs of 6, 12 or 24; MOQ of 1, 2 or 4 packs |
 | `unit_cost`, `holding_cost_rate` | 0.65 × average shelf price; 25% per year |
-| `is_simulated` | Always `True`, surfaced in the UI and as a Critic INFO issue |
+| `is_simulated` | `True` when loaded; surfaced in the UI and as a Critic INFO issue |
 
 ## Synthetic fallback
 
 `src/data/synthetic.py` generates M5-shaped data (weekly seasonality, trend, events, SNAP,
-one spike item and one intermittent item). Tests use it, and the app falls back to it if the
-processed parquet is missing, so the project runs offline.
+one spike item and one intermittent item). Tests load it into a temporary SQLite database
+(`load_dataset`), and `init_db` falls back to it if neither the raw CSVs nor the processed
+seed exist, so the project runs offline.

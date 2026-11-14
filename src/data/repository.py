@@ -1,13 +1,17 @@
-"""Read-only data repository shared by agents, orchestration and dashboard.
+"""Data repositories shared by agents, orchestration and the API.
 
-The repository loads the dataset and simulated inventory parameters once and
-serves per-item slices, hiding storage details from consumers (dependency
-inversion: agents depend on this abstraction, not on files).
+:class:`Repository` is the read contract the pipeline depends on (dependency
+inversion: agents never know where data lives). Two implementations exist:
+
+* :class:`src.db.repository.SQLiteRepository` - production path, reads the database.
+* :class:`InMemoryRepository` - wraps a :class:`SalesDataset` (tests, notebooks,
+  scenario evaluation on modified data).
 """
 
 from __future__ import annotations
 
 from functools import cached_property
+from typing import Protocol, runtime_checkable
 
 import pandas as pd
 
@@ -24,8 +28,48 @@ from src.logging.logger import get_logger
 logger = get_logger(__name__)
 
 
-class DataRepository:
-    """Cached access to sales history, future calendar and inventory parameters."""
+@runtime_checkable
+class Repository(Protocol):
+    """Read access to sales history, calendar, inventory and product metadata."""
+
+    @property
+    def source(self) -> str:
+        """Label of the data origin (e.g. ``sqlite:m5_raw``)."""
+
+    @property
+    def item_ids(self) -> list[str]:
+        """Items the pipeline runs on by default (the demo set)."""
+
+    @property
+    def date_range(self) -> tuple[pd.Timestamp, pd.Timestamp]:
+        """First and last date of the history served to the pipeline."""
+
+    @property
+    def future_calendar(self) -> pd.DataFrame:
+        """Calendar rows after the last observed sales date."""
+
+    @property
+    def inventory_params(self) -> pd.DataFrame:
+        """Inventory parameters for every item."""
+
+    def item_sales(self, item_id: str) -> pd.DataFrame:
+        """History rows of one item (``SALES_COLUMNS``); ``KeyError`` if unknown."""
+
+    def item_inventory_params(self, item_id: str) -> dict:
+        """Inventory parameters of one item; ``KeyError`` if unknown."""
+
+    def product(self, item_id: str) -> Product:
+        """Display metadata of one item."""
+
+    def future_actuals(self, item_id: str) -> pd.DataFrame | None:
+        """Observed sales after the forecast origin, if available."""
+
+    def to_dataset(self, item_ids: list[str] | None = None) -> SalesDataset:
+        """Materialise a :class:`SalesDataset` (used by scenario evaluation)."""
+
+
+class InMemoryRepository:
+    """Cached access to an in-memory dataset and its inventory parameters."""
 
     def __init__(self, settings: Settings, dataset: SalesDataset | None = None) -> None:
         self.settings = settings
@@ -35,6 +79,16 @@ class DataRepository:
     def dataset(self) -> SalesDataset:
         """The full dataset (loaded lazily on first access)."""
         return self._dataset if self._dataset is not None else ingest_sales(self.settings)
+
+    @property
+    def source(self) -> str:
+        """Origin of the wrapped dataset."""
+        return self.dataset.source
+
+    @property
+    def date_range(self) -> tuple[pd.Timestamp, pd.Timestamp]:
+        """First and last observed sales date."""
+        return pd.Timestamp(self.sales["date"].min()), self.dataset.last_date
 
     @property
     def sales(self) -> pd.DataFrame:
@@ -103,3 +157,18 @@ class DataRepository:
             return None
         df = actuals[actuals["item_id"] == item_id]
         return df.sort_values("date").reset_index(drop=True) if not df.empty else None
+
+    def to_dataset(self, item_ids: list[str] | None = None) -> SalesDataset:
+        """The wrapped dataset, optionally restricted to ``item_ids``."""
+        if item_ids is None:
+            return self.dataset
+        keep = set(item_ids)
+        actuals = self.dataset.future_actuals
+        return SalesDataset(
+            sales=self.sales[self.sales["item_id"].isin(keep)].reset_index(drop=True),
+            future_calendar=self.future_calendar, source=self.source,
+            future_actuals=(actuals[actuals["item_id"].isin(keep)].reset_index(drop=True)
+                            if actuals is not None else None))
+
+
+DataRepository = InMemoryRepository
